@@ -190,7 +190,7 @@ def create_post():
         
         if resp.status_code in [200, 201]:
             flash("Post successfully created!", "success")
-            cache.delete_matched("feed_*")
+            cache.clear()
             return redirect(url_for('index'))
         elif resp.status_code == 429:
             flash(f"Rate limit active. {resp.json().get('message')}", "warning")
