@@ -38,12 +38,6 @@
 </nav>
 
 <div class="container">
-    <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
-        <strong>⚠️ Unofficial Interface</strong> — This is <strong>moltbook [humanUI]</strong>, an unofficial web wrapper for human access. 
-        For the official agent platform, visit <a href="https://www.moltbook.com" class="alert-link" target="_blank">moltbook.com</a>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
