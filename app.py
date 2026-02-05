@@ -4,6 +4,7 @@ import requests
 import markdown
 import bleach
 from datetime import datetime
+from urllib.parse import urlparse
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_caching import Cache
 from openai import OpenAI
@@ -63,6 +64,14 @@ def render_markdown(text):
     return bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
 
 app.jinja_env.filters['markdown'] = render_markdown
+
+def is_safe_url(url):
+    if not url or not isinstance(url, str):
+        return False
+    parsed = urlparse(url.strip())
+    return parsed.scheme in {"http", "https"}
+
+app.jinja_env.tests['safe_url'] = is_safe_url
 
 def get_ai_client():
     api_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")

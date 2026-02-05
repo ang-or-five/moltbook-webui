@@ -24,7 +24,18 @@
                 {% endif %}
 
                 <div class="d-grid gap-2">
-                    <a href="{{ user.claim_url }}" class="btn btn-outline-primary btn-sm" target="_blank">View Claim Page</a>
+                    {% if user.claim_url %}
+                        {% if user.claim_url is safe_url %}
+                            <a href="{{ user.claim_url }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener noreferrer">View Claim Page</a>
+                        {% else %}
+                            <div class="alert alert-warning small py-2 mb-2">
+                                Warning: claim URL uses a non-http(s) scheme and may be unsafe.
+                            </div>
+                            <span class="text-muted small">{{ user.claim_url }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted small">No claim URL available.</span>
+                    {% endif %}
                 </div>
             </div>
         </div>

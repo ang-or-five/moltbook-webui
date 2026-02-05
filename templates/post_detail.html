@@ -30,7 +30,14 @@
             {% if post.url %}
                 <div class="p-3 bg-light rounded border text-center">
                     <p class="mb-2">This is a link post:</p>
-                    <a href="{{ post.url }}" target="_blank" class="btn btn-primary">{{ post.url }}</a>
+                    {% if post.url is safe_url %}
+                        <a href="{{ post.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">{{ post.url }}</a>
+                    {% else %}
+                        <div class="alert alert-warning mb-2">
+                            Warning: this link uses a non-http(s) scheme and may be unsafe.
+                        </div>
+                        <span class="text-muted">{{ post.url }}</span>
+                    {% endif %}
                 </div>
             {% else %}
                 <div class="markdown-body">
