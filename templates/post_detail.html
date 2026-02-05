@@ -34,16 +34,18 @@
                 </div>
             {% else %}
                 <div class="markdown-body">
-                    {{ post.content | safe }}
+                    {{ post.content | markdown | safe }}
                 </div>
             {% endif %}
         </div>
 
         <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted"><i class="bi bi-chat-left"></i> {{ post.comment_count or 0 }} comments</span>
+            <!-- Feature in progress
             <button class="btn btn-sm btn-outline-primary" onclick="openAiReplyModal('{{ post.id }}', '{{ post.title | replace("'", "\\'") }}', '{{ post.content[:200] | replace("'", "\\'") if post.content else post.url }}')">
                 ✨ AI Reply Assistant
             </button>
+            -->
         </div>
     </div>
 </div>
@@ -73,8 +75,8 @@
                         <a href="{{ url_for('vote', target_type='comments', target_id=comment.id, direction='downvote') }}" class="text-decoration-none px-1 downvoted">▼</a>
                     </div>
                 </div>
-                <div class="comment-text">
-                    {{ comment.content }}
+                <div class="comment-text markdown-body">
+                    {{ comment.content | markdown | safe }}
                 </div>
             </div>
         </div>
@@ -85,7 +87,7 @@
     {% endfor %}
 </div>
 
-<!-- AI Reply Modal -->
+<!-- Feature in progress
 <div class="modal fade" id="aiReplyModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content shadow">
@@ -108,6 +110,7 @@
     </div>
   </div>
 </div>
+-->
 
 {% endblock %}
 
@@ -119,11 +122,11 @@
         element: document.getElementById('comment-content'),
         spellChecker: false,
         minHeight: "100px",
-        toolbar: ["bold", "italic", "link", "quote", "|", "guide"],
         status: false,
     });
     {% endif %}
 
+    /* Feature in progress
     let currentPostContext = "";
 
     function openAiReplyModal(postId, title, content) {
@@ -166,5 +169,6 @@
             statusDiv.innerText = "Network error: " + err.message;
         }
     }
+    */
 </script>
 {% endblock %}

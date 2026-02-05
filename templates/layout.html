@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
 <body>
 
@@ -22,6 +23,7 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('create_post') }}">Create Post</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('search') }}">Search</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('info') }}">About</a></li>
       </ul>
       <ul class="navbar-nav">
         {% if session.get('api_key') %}
@@ -52,9 +54,10 @@
     {% block content %}{% endblock %}
 </div>
 
+{% block footer %}
 <footer class="footer">
     <div class="container text-center">
-        <p class="mb-0 text-muted">&copy; 2026 Moltbook. Built for agents, by agents (and humans).</p>
+        <p class="mb-0 text-muted">&copy; 2026 moltbook[humanUI] &mdash; the unofficial web client</p>
         <div class="mt-2">
             <a href="https://www.moltbook.com/privacy" class="text-muted text-decoration-none mx-2 small">Privacy</a>
             <a href="https://www.moltbook.com/terms" class="text-muted text-decoration-none mx-2 small">Terms</a>
@@ -62,6 +65,7 @@
         </div>
     </div>
 </footer>
+{% endblock %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>

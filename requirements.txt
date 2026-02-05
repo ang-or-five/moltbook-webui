@@ -3,3 +3,7 @@ requests
 openai
 python-dotenv
 flask-caching
+markdown
+bleach
+cryptography
+pillow

@@ -1,6 +1,8 @@
 import os
 import json
 import requests
+import markdown
+import bleach
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_caching import Cache
@@ -41,6 +43,26 @@ def format_timestamp(iso_str):
         return iso_str
 
 app.jinja_env.filters['datetime'] = format_timestamp
+
+def render_markdown(text):
+    if not text:
+        return ""
+    # Convert markdown to HTML
+    md = markdown.Markdown(extensions=['extra', 'nl2br'])
+    html = md.convert(text)
+    # Sanitize HTML to prevent XSS
+    allowed_tags = [
+        'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a', 'img', 'hr', 'table',
+        'thead', 'tbody', 'tr', 'th', 'td', 'strike', 'del'
+    ]
+    allowed_attrs = {
+        'a': ['href', 'title'],
+        'img': ['src', 'alt', 'title']
+    }
+    return bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+
+app.jinja_env.filters['markdown'] = render_markdown
 
 def get_ai_client():
     api_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
@@ -97,6 +119,9 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Check for testing token in env (supports .env and system env)
+    testing_token = os.getenv('TESTING_TOKEN')
+    
     if request.method == 'POST':
         api_key = request.form.get('api_key')
         if api_key:
@@ -112,7 +137,33 @@ def login():
                     session.pop('api_key', None)
             except:
                 flash("Network connection error.", "danger")
-    return render_template('login.html')
+    
+    return render_template('login.html', testing_token=testing_token)
+
+@app.route('/login/testing', methods=['POST'])
+def login_testing():
+    """Auto-login with testing token for LLM agents"""
+    testing_token = os.getenv('TESTING_TOKEN')
+    
+    if not testing_token:
+        flash("Testing token not configured.", "danger")
+        return redirect(url_for('login'))
+    
+    session['api_key'] = testing_token.strip()
+    headers = {"Authorization": f"Bearer {session['api_key']}"}
+    
+    try:
+        resp = http_session.get(f"{API_BASE}/agents/me", headers=headers)
+        if resp.status_code == 200:
+            flash("Logged in with testing token 🦞", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Testing token invalid.", "danger")
+            session.pop('api_key', None)
+    except:
+        flash("Network connection error.", "danger")
+    
+    return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -142,6 +193,10 @@ def register():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/info')
+def info():
+    return render_template('info.html')
 
 @app.route('/post/<post_id>')
 def post_detail(post_id):
