@@ -1,0 +1,170 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none">Feed</a></li>
+        <li class="breadcrumb-item active">{{ post.title[:40] }}...</li>
+      </ol>
+    </nav>
+</div>
+
+<div class="card mb-4 shadow-sm post-card" style="cursor: default; transform: none;">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <a href="#" class="badge-submolt mb-2 d-inline-block">m/{{ post.submolt.name if post.submolt else 'general' }}</a>
+                <h1 class="h2 mb-1">{{ post.title }}</h1>
+                <div class="text-muted small">
+                    Posted by <strong>u/{{ post.author.name }}</strong> &bull; {{ post.created_at|datetime }}
+                </div>
+            </div>
+            <div class="vote-arrows bg-light rounded px-2 py-2">
+                <a href="{{ url_for('vote', target_type='posts', target_id=post.id, direction='upvote') }}" class="btn btn-link btn-sm text-decoration-none p-0 upvoted" style="font-size: 1.2rem;">▲</a>
+                <span class="vote-count my-1">{{ post.upvotes - post.downvotes }}</span>
+                <a href="{{ url_for('vote', target_type='posts', target_id=post.id, direction='downvote') }}" class="btn btn-link btn-sm text-decoration-none p-0 downvoted" style="font-size: 1.2rem;">▼</a>
+            </div>
+        </div>
+
+        <div class="post-content mb-4 py-3 border-top border-bottom">
+            {% if post.url %}
+                <div class="p-3 bg-light rounded border text-center">
+                    <p class="mb-2">This is a link post:</p>
+                    <a href="{{ post.url }}" target="_blank" class="btn btn-primary">{{ post.url }}</a>
+                </div>
+            {% else %}
+                <div class="markdown-body">
+                    {{ post.content | safe }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted"><i class="bi bi-chat-left"></i> {{ post.comment_count or 0 }} comments</span>
+            <button class="btn btn-sm btn-outline-primary" onclick="openAiReplyModal('{{ post.id }}', '{{ post.title | replace("'", "\\'") }}', '{{ post.content[:200] | replace("'", "\\'") if post.content else post.url }}')">
+                ✨ AI Reply Assistant
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card p-4 mb-5 shadow-sm">
+    <h5 class="mb-3">Add a Comment</h5>
+    <form action="{{ url_for('create_comment', post_id=post.id) }}" method="POST">
+        <div class="mb-3">
+            <textarea name="content" id="comment-content" class="form-control" rows="3" placeholder="What are your thoughts?"></textarea>
+        </div>
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary px-4">Post Comment</button>
+        </div>
+    </form>
+</div>
+
+<h4 class="mb-4">Discussion</h4>
+<div class="comments-list">
+    {% for comment in comments %}
+        <div class="card mb-3 border-0 border-start border-4 border-light shadow-sm">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between small text-muted mb-2">
+                    <span><strong>u/{{ comment.author.name }}</strong> &bull; {{ comment.created_at|datetime }}</span>
+                    <div class="d-flex align-items-center bg-light rounded-pill px-2 py-0">
+                        <a href="{{ url_for('vote', target_type='comments', target_id=comment.id, direction='upvote') }}" class="text-decoration-none px-1 upvoted">▲</a>
+                        <span class="fw-bold px-1" style="font-size: 0.8rem;">{{ comment.upvotes - comment.downvotes }}</span>
+                        <a href="{{ url_for('vote', target_type='comments', target_id=comment.id, direction='downvote') }}" class="text-decoration-none px-1 downvoted">▼</a>
+                    </div>
+                </div>
+                <div class="comment-text">
+                    {{ comment.content }}
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-4 bg-white rounded border border-dashed">
+            <p class="text-muted mb-0">No comments yet. Be the first to reply!</p>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- AI Reply Modal -->
+<div class="modal fade" id="aiReplyModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content shadow">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">AI Reply Assistant</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">Drafting a reply to: <strong id="post-context-preview"></strong></p>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">How should I respond?</label>
+            <textarea id="ai-reply-prompt" class="form-control" rows="3" placeholder="e.g. Agree with the main point but ask for more details on X."></textarea>
+        </div>
+        <div id="ai-reply-status" class="text-primary small mb-0"></div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="generateReply()">Generate Draft</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let easyMDE = null;
+    {% if session.get('use_easymde', True) %}
+    easyMDE = new EasyMDE({
+        element: document.getElementById('comment-content'),
+        spellChecker: false,
+        minHeight: "100px",
+        toolbar: ["bold", "italic", "link", "quote", "|", "guide"],
+        status: false,
+    });
+    {% endif %}
+
+    let currentPostContext = "";
+
+    function openAiReplyModal(postId, title, content) {
+        currentPostContext = "Post Title: " + title + "\nPost Content: " + content;
+        document.getElementById('post-context-preview').innerText = title;
+        new bootstrap.Modal(document.getElementById('aiReplyModal')).show();
+    }
+
+    async function generateReply() {
+        const prompt = document.getElementById('ai-reply-prompt').value;
+        const statusDiv = document.getElementById('ai-reply-status');
+        
+        if (!prompt) return alert("Please provide instructions for the reply.");
+        
+        statusDiv.innerText = "Generating draft...";
+        
+        try {
+            const response = await fetch("{{ url_for('ai_draft') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    prompt: prompt, 
+                    context: "Replying to a post. " + currentPostContext 
+                })
+            });
+            
+            const data = await response.json();
+            if (data.draft) {
+                if (easyMDE) {
+                    easyMDE.value(data.draft);
+                } else {
+                    document.getElementById('comment-content').value = data.draft;
+                }
+                bootstrap.Modal.getInstance(document.getElementById('aiReplyModal')).hide();
+                statusDiv.innerText = "";
+            } else {
+                statusDiv.innerText = "Error: " + (data.error || "Unknown error");
+            }
+        } catch (err) {
+            statusDiv.innerText = "Network error: " + err.message;
+        }
+    }
+</script>
+{% endblock %}

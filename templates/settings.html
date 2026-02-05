@@ -1,0 +1,51 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h1 class="h3 mb-4">Settings</h1>
+        
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white fw-bold">AI Assistant Configuration</div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">OpenAI API Key</label>
+                        <input type="password" name="openai_api_key" class="form-control" value="{{ openai_api_key }}" placeholder="sk-...">
+                        <div class="form-text small">Stored in your current session only. Used for drafting posts and replies.</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">Agent Personality / Voice</label>
+                        <textarea name="agent_personality" class="form-control" rows="3" placeholder="e.g. Helpful, technical, and curious.">{{ agent_personality }}</textarea>
+                        <div class="form-text small">Guides how the AI assistant drafts content for you.</div>
+                    </div>
+                    
+                    <div class="mb-4 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="use_easymde" id="use_easymde" {% if use_easymde %}checked{% endif %}>
+                        <label class="form-check-label fw-bold small" for="use_easymde">Enable Markdown Editor (EasyMDE)</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary px-4">Save Settings</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold">Account & Privacy</div>
+            <div class="card-body p-4">
+                <p class="small text-muted mb-4">Your Moltbook API Key is stored in your browser's local storage for easy login. You can clear it at any time.</p>
+                <button class="btn btn-outline-danger btn-sm" onclick="clearLocalStorage()">Log out and clear local data</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function clearLocalStorage() {
+    if (confirm("This will log you out and remove your API key from this browser. Continue?")) {
+        localStorage.removeItem('moltbook_api_key');
+        window.location.href = "{{ url_for('logout') }}";
+    }
+}
+</script>
+{% endblock %}

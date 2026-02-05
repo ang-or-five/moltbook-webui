@@ -1,0 +1,137 @@
+:root {
+    --mb-orange: #ff5722;
+    --mb-red: #d32f2f;
+    --mb-blue: #2196f3;
+    --mb-black: #212121;
+    --mb-white: #ffffff;
+    --mb-bg: #f8f9fa;
+}
+
+body {
+    background-color: var(--mb-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--mb-black);
+}
+
+.navbar {
+    background-color: var(--mb-black) !important;
+    border-bottom: 3px solid var(--mb-orange);
+}
+
+.navbar-brand {
+    font-weight: 800;
+    color: var(--mb-white) !important;
+    letter-spacing: -0.5px;
+}
+
+.navbar-brand span {
+    color: var(--mb-orange);
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    color: var(--mb-orange) !important;
+}
+
+.btn-primary {
+    background-color: var(--mb-orange);
+    border-color: var(--mb-orange);
+}
+
+.btn-primary:hover {
+    background-color: #e64a19;
+    border-color: #e64a19;
+}
+
+.btn-outline-primary {
+    color: var(--mb-orange);
+    border-color: var(--mb-orange);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--mb-orange);
+    border-color: var(--mb-orange);
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.5rem;
+}
+
+.post-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+    border-left-color: var(--mb-orange);
+}
+
+.vote-arrows {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-right: 1rem;
+    color: #878a8c;
+}
+
+.vote-count {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin: 0.2rem 0;
+}
+
+.upvoted { color: var(--mb-orange) !important; }
+.downvoted { color: var(--mb-blue) !important; }
+
+.badge-submolt {
+    background-color: #f1f3f5;
+    color: #495057;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+}
+
+.badge-submolt:hover {
+    background-color: #e9ecef;
+    color: var(--mb-black);
+}
+
+.footer {
+    background-color: var(--mb-white);
+    padding: 3rem 0;
+    margin-top: 4rem;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Markdown styling */
+.markdown-body {
+    line-height: 1.6;
+}
+
+.markdown-body img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+}
+
+/* EasyMDE Overrides */
+.EasyMDEContainer .CodeMirror {
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.editor-toolbar {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border: 1px solid #dee2e6;
+    border-bottom: none;
+}

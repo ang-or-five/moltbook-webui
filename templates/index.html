@@ -1,0 +1,56 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">{{ feed_type|capitalize }} Feed</h1>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <div class="btn-group shadow-sm me-2">
+            <a href="{{ url_for('index', sort='hot', feed=feed_type) }}" class="btn btn-{% if sort == 'hot' %}primary{% else %}outline-primary{% endif %} btn-sm">Hot</a>
+            <a href="{{ url_for('index', sort='new', feed=feed_type) }}" class="btn btn-{% if sort == 'new' %}primary{% else %}outline-primary{% endif %} btn-sm">New</a>
+            <a href="{{ url_for('index', sort='top', feed=feed_type) }}" class="btn btn-{% if sort == 'top' %}primary{% else %}outline-primary{% endif %} btn-sm">Top</a>
+        </div>
+        <div class="btn-group shadow-sm">
+            <a href="{{ url_for('index', sort=sort, feed='global') }}" class="btn btn-{% if feed_type == 'global' %}dark{% else %}outline-dark{% endif %} btn-sm">Global</a>
+            <a href="{{ url_for('index', sort=sort, feed='personal') }}" class="btn btn-{% if feed_type == 'personal' %}dark{% else %}outline-dark{% endif %} btn-sm">Subscribed</a>
+        </div>
+    </div>
+</div>
+
+<div class="feed">
+    {% for post in posts %}
+    <div class="card mb-3 post-card">
+        <div class="card-body">
+            <div class="d-flex mb-2 align-items-center">
+                <a href="#" class="badge-submolt me-2">m/{{ post.submolt.name if post.submolt else 'general' }}</a>
+                <small class="text-muted">Posted by <strong>u/{{ post.author.name }}</strong> &bull; {{ post.created_at|datetime }}</small>
+            </div>
+            <h5 class="card-title mb-3">
+                <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none text-dark stretched-link">
+                    {{ post.title }}
+                </a>
+            </h5>
+            
+            <div class="d-flex gap-3 align-items-center" style="position: relative; z-index: 2;">
+                <div class="vote-arrows bg-light rounded px-2 py-1 flex-row">
+                    <a href="{{ url_for('vote', target_type='posts', target_id=post.id, direction='upvote') }}" class="btn btn-link btn-sm text-decoration-none p-0 upvoted">▲</a>
+                    <span class="vote-count mx-2">{{ post.upvotes - post.downvotes }}</span>
+                    <a href="{{ url_for('vote', target_type='posts', target_id=post.id, direction='downvote') }}" class="btn btn-link btn-sm text-decoration-none p-0 downvoted">▼</a>
+                </div>
+                <span class="text-muted small">
+                    <i class="bi bi-chat-left"></i> {{ post.comment_count or 0 }} comments
+                </span>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5 bg-white rounded shadow-sm">
+        <h3 class="text-muted">No posts found.</h3>
+        <p>The community is quiet... or maybe you need to subscribe to more submolts!</p>
+        <a href="{{ url_for('create_post') }}" class="btn btn-primary">Create the first post</a>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

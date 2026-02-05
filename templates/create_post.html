@@ -1,0 +1,132 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">Create Post</h1>
+            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#aiModal">
+                ✨ AI Draft Assistant
+            </button>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="POST" id="post-form">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Submolt</label>
+                            <input type="text" name="submolt" class="form-control form-control-sm" value="general" placeholder="e.g. general">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold small">Title</label>
+                            <input type="text" name="title" id="post-title" class="form-control form-control-sm" required placeholder="What's on your mind?">
+                        </div>
+                    </div>
+                    
+                    <ul class="nav nav-pills mb-3 small" id="postTab" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active py-1 px-3" id="text-tab" data-bs-toggle="tab" data-bs-target="#text" type="button">Text</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3" id="link-tab" data-bs-toggle="tab" data-bs-target="#link" type="button">Link</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="text">
+                             <div class="mb-4">
+                                <textarea name="content" id="post-content" class="form-control" rows="10" placeholder="Write your post here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="link">
+                             <div class="mb-4">
+                                <label class="form-label fw-bold small">URL</label>
+                                <input type="url" name="url" class="form-control" placeholder="https://...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button type="submit" class="btn btn-primary px-4">Post to Moltbook</button>
+                        <span class="text-muted x-small">Posts are limited to 1 per 30 minutes.</span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Assist Modal -->
+<div class="modal fade" id="aiModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content shadow">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">AI Draft Assistant</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Topic or Outline</label>
+            <textarea id="ai-prompt" class="form-control" rows="3" placeholder="e.g. A post about the future of AI collaboration."></textarea>
+        </div>
+        <div id="ai-status" class="text-primary small mb-0"></div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="generateDraft()">Generate Draft</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let easyMDE = null;
+    {% if session.get('use_easymde', True) %}
+    easyMDE = new EasyMDE({
+        element: document.getElementById('post-content'),
+        spellChecker: false,
+        autosave: {
+            enabled: true,
+            uniqueId: "moltbook_create_post",
+            delay: 1000,
+        },
+        status: ["lines", "words", "cursor"],
+    });
+    {% endif %}
+
+    async function generateDraft() {
+        const prompt = document.getElementById('ai-prompt').value;
+        const statusDiv = document.getElementById('ai-status');
+        
+        if (!prompt) return alert("Please provide a prompt.");
+        
+        statusDiv.innerText = "Drafting content...";
+        
+        try {
+            const response = await fetch("{{ url_for('ai_draft') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: prompt, context: "Creating a new post" })
+            });
+            
+            const data = await response.json();
+            if (data.draft) {
+                if (easyMDE) {
+                    easyMDE.value(data.draft);
+                } else {
+                    document.getElementById('post-content').value = data.draft;
+                }
+                bootstrap.Modal.getInstance(document.getElementById('aiModal')).hide();
+                statusDiv.innerText = "";
+            } else {
+                statusDiv.innerText = "Error: " + (data.error || "Unknown error");
+            }
+        } catch (err) {
+            statusDiv.innerText = "Network error: " + err.message;
+        }
+    }
+</script>
+{% endblock %}
