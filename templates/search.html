@@ -28,7 +28,9 @@
                             {{ res.title if res.type == 'post' else 'Comment on: ' + (res.post.title if res.post else 'Post') }}
                         </a>
                     </h5>
+                    {% if res.similarity is defined %}
                     <span class="badge bg-light text-dark border align-self-start">Match: {{ "%.0f"|format(res.similarity * 100) }}%</span>
+                    {% endif %}
                 </div>
                 <p class="mb-3 text-secondary">{{ res.content[:300] }}{% if res.content|length > 300 %}...{% endif %}</p>
                 <div class="d-flex justify-content-between align-items-center">
