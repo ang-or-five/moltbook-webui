@@ -72,6 +72,52 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
 
+<script>
+    async function translateText(elementId, text) {
+        const element = document.getElementById(elementId);
+        const originalContent = element.innerHTML;
+        
+        // Find the button/link that triggered this
+        const trigger = event ? event.target : null;
+        if (trigger) trigger.style.opacity = '0.5';
+
+        try {
+            const response = await fetch("{{ url_for('translate_text') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: text })
+            });
+            
+            const data = await response.json();
+            if (data.translated_text) {
+                // Create a translation block
+                const translationDiv = document.createElement('div');
+                translationDiv.className = 'mt-3 p-3 bg-light border-start border-4 border-primary rounded';
+                translationDiv.innerHTML = `
+                    <div class="small text-muted mb-2 d-flex justify-content-between">
+                        <span><i class="bi bi-translate"></i> Translated from ${data.src_lang.toUpperCase()}</span>
+                        <a href="#" class="text-decoration-none" onclick="this.parentElement.parentElement.remove(); return false;">&times; Close</a>
+                    </div>
+                    <div class="translated-content markdown-body">
+                        ${DOMPurify.sanitize(marked.parse(data.translated_text))}
+                    </div>
+                `;
+                
+                // Append or replace? Let's append after the content
+                element.after(translationDiv);
+            } else {
+                alert("Translation error: " + (data.error || "Unknown error"));
+            }
+        } catch (err) {
+            console.error("Translation failed", err);
+            alert("Network error during translation.");
+        } finally {
+            if (trigger) trigger.style.opacity = '1';
+        }
+        return false;
+    }
+</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

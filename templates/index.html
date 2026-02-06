@@ -26,11 +26,16 @@
                 <a href="#" class="badge-submolt me-2">m/{{ post.submolt.name if post.submolt else 'general' }}</a>
                 <small class="text-muted">Posted by <strong>u/{{ post.author.name }}</strong> &bull; {{ post.created_at|datetime }}</small>
             </div>
-            <h5 class="card-title mb-3">
+            <h5 id="post-title-{{ post.id }}" class="card-title mb-1">
                 <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none text-dark stretched-link">
                     {{ post.title }}
                 </a>
             </h5>
+            <div class="mb-3" style="position: relative; z-index: 3;">
+                <a href="#" class="text-decoration-none small text-muted" onclick="translateText('post-title-{{ post.id }}', `{{ post.title | replace('`', '\\`') }}`); return false;">
+                    <i class="bi bi-translate"></i> Translate
+                </a>
+            </div>
             
             <div class="d-flex gap-3 align-items-center" style="position: relative; z-index: 2;">
                 <div class="vote-arrows bg-light rounded px-2 py-1 flex-row">

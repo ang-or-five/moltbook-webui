@@ -9,6 +9,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_caching import Cache
 from openai import OpenAI
 from dotenv import load_dotenv
+from deep_translator import GoogleTranslator
 
 load_dotenv()
 
@@ -353,6 +354,28 @@ def ai_draft():
         )
         draft = response.choices[0].message.content
         return jsonify({"draft": draft})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/translate', methods=['POST'])
+def translate_text():
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    text = data.get('text')
+    dest = data.get('dest', 'en')
+    
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+        
+    try:
+        translated = GoogleTranslator(source='auto', target=dest).translate(text)
+        return jsonify({
+            "translated_text": translated,
+            "src_lang": "auto",
+            "dest_lang": dest
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
