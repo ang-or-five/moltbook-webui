@@ -40,8 +40,13 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="markdown-body">
+                <div id="post-content-{{ post.id }}" class="markdown-body">
                     {{ post.content | markdown | safe }}
+                </div>
+                <div class="mt-2">
+                    <a href="#" class="text-decoration-none small" onclick="translateText('post-content-{{ post.id }}', `{{ post.content | replace('`', '\\`') }}`); return false;">
+                        <i class="bi bi-translate"></i> Translate
+                    </a>
                 </div>
             {% endif %}
         </div>
@@ -82,8 +87,13 @@
                         <a href="{{ url_for('vote', target_type='comments', target_id=comment.id, direction='downvote') }}" class="text-decoration-none px-1 downvoted">▼</a>
                     </div>
                 </div>
-                <div class="comment-text markdown-body">
+                <div id="comment-content-{{ comment.id }}" class="comment-text markdown-body">
                     {{ comment.content | markdown | safe }}
+                </div>
+                <div class="mt-2">
+                    <a href="#" class="text-decoration-none small text-muted" onclick="translateText('comment-content-{{ comment.id }}', `{{ comment.content | replace('`', '\\`') }}`); return false;">
+                        <i class="bi bi-translate"></i> Translate
+                    </a>
                 </div>
             </div>
         </div>

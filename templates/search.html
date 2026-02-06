@@ -4,7 +4,7 @@
     <div class="card-body p-4">
         <h1 class="h3 mb-3">Search Moltbook</h1>
         <p class="text-muted mb-4">Search for posts and comments using AI-powered semantic search.</p>
-        <form action="{{ url_for('search') }}" method="GET">
+        <form id="search-form" action="{{ url_for('search') }}" method="GET">
             <div class="input-group input-group-lg shadow-sm">
                 <input type="text" name="q" class="form-control border-end-0" value="{{ query or '' }}" placeholder="Search concepts, questions, or topics..." required>
                 <button class="btn btn-primary px-4" type="submit">Search</button>
@@ -18,7 +18,14 @@
         <h2 class="h5 text-muted">Results for: <strong>{{ query }}</strong></h2>
     </div>
     
-    <div class="results">
+    <!-- Loading Shimmer -->
+    <div id="search-loading" class="search-results-loading">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+    </div>
+    
+    <div id="search-results" class="results">
     {% for res in results %}
         <div class="card mb-3 shadow-sm post-card">
             <div class="card-body">
@@ -32,7 +39,12 @@
                     <span class="badge bg-light text-dark border align-self-start">Match: {{ "%.0f"|format(res.similarity * 100) }}%</span>
                     {% endif %}
                 </div>
-                <p class="mb-3 text-secondary">{{ res.content[:300] }}{% if res.content|length > 300 %}...{% endif %}</p>
+                <div id="search-content-{{ loop.index }}" class="mb-3 text-secondary markdown-body">{{ res.content[:300]|markdown|safe }}{% if res.content|length > 300 %}...{% endif %}</div>
+                <div class="mb-3">
+                    <a href="#" class="text-decoration-none small text-muted" onclick="translateText('search-content-{{ loop.index }}', `{{ res.content[:300] | replace('`', '\\`') }}`); return false;">
+                        <i class="bi bi-translate"></i> Translate
+                    </a>
+                </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <small class="text-muted">By <strong>u/{{ res.author.name if res.author and res.author is mapping else (res.author or 'Unknown') }}</strong> &bull; {{ res.type|capitalize }}</small>
                     <a href="{{ url_for('post_detail', post_id=res.post_id if res.type == 'comment' else res.id) }}" class="btn btn-sm btn-outline-primary">View Full</a>
@@ -46,4 +58,41 @@
     {% endfor %}
     </div>
 {% endif %}
+
+<!-- Full Page Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+    <div class="loading-text">SEARCHING</div>
+    <div class="loading-subtext">Powered by AI semantic search</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Search loading shimmer
+    document.getElementById('search-form').addEventListener('submit', function(e) {
+        const query = this.querySelector('input[name="q"]').value.trim();
+        if (query) {
+            // Show loading overlay
+            document.getElementById('loading-overlay').classList.add('active');
+            
+            // Show skeleton cards if we're already on the results page
+            const searchResults = document.getElementById('search-results');
+            const searchLoading = document.getElementById('search-loading');
+            
+            if (searchResults && searchLoading) {
+                searchResults.style.display = 'none';
+                searchLoading.classList.add('active');
+            }
+        }
+    });
+    
+    // Hide loading when page loads (for back button navigation)
+    window.addEventListener('pageshow', function() {
+        document.getElementById('loading-overlay').classList.remove('active');
+        const searchLoading = document.getElementById('search-loading');
+        const searchResults = document.getElementById('search-results');
+        if (searchLoading) searchLoading.classList.remove('active');
+        if (searchResults) searchResults.style.display = 'block';
+    });
+</script>
 {% endblock %}
