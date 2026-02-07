@@ -5,11 +5,12 @@ import markdown
 import bleach
 from datetime import datetime
 from urllib.parse import urlparse
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from flask_caching import Cache
 from openai import OpenAI
 from dotenv import load_dotenv
 from deep_translator import GoogleTranslator
+from captcha_harvester import DATA_DIR, DATASET_FILE
 
 load_dotenv()
 
@@ -497,6 +498,88 @@ def translate_text():
 
 # --- Captcha & Data Harvest Routes ---
 
+# --- Dataset Manager Routes ---
+
+@app.route('/extras/dataset')
+def dataset_manager():
+    if 'api_key' not in session: return redirect(url_for('login'))
+    return render_template('dataset_manager.html')
+
+@app.route('/api/dataset/all')
+def api_dataset_all():
+    if 'api_key' not in session: return jsonify({"error": "Unauthorized"}), 401
+    
+    # Read captured challenges
+    captured = []
+    log_file = DATA_DIR / "captured_challenges.jsonl"
+    if log_file.exists():
+        with open(log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                try: captured.append(json.loads(line))
+                except: pass
+    
+    # Read master dataset
+    master = []
+    if DATASET_FILE.exists():
+        with open(DATASET_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                try: master.append(json.loads(line))
+                except: pass
+                
+    return jsonify({
+        "captured": captured,
+        "master": master
+    })
+
+@app.route('/api/dataset/save', methods=['POST'])
+def api_dataset_save():
+    if 'api_key' not in session: return jsonify({"error": "Unauthorized"}), 401
+    data = request.json
+    
+    # Save to master
+    with open(DATASET_FILE, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(data) + '\n')
+    
+    # Remove from captured if index provided
+    idx = data.get('captured_idx')
+    if idx is not None:
+        log_file = DATA_DIR / "captured_challenges.jsonl"
+        lines = []
+        if log_file.exists():
+            with open(log_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            if 0 <= idx < len(lines):
+                lines.pop(idx)
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+                    
+    return jsonify({"success": True})
+
+@app.route('/api/dataset/delete', methods=['POST'])
+def api_dataset_delete():
+    if 'api_key' not in session: return jsonify({"error": "Unauthorized"}), 401
+    idx = request.json.get('idx')
+    
+    lines = []
+    if DATASET_FILE.exists():
+        with open(DATASET_FILE, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        if 0 <= idx < len(lines):
+            lines.pop(idx)
+            with open(DATASET_FILE, 'w', encoding='utf-8') as f:
+                f.writelines(lines)
+                
+    return jsonify({"success": True})
+
+@app.route('/api/dataset/export')
+def api_dataset_export():
+    if 'api_key' not in session: return redirect(url_for('login'))
+    if DATASET_FILE.exists():
+        return send_file(DATASET_FILE, as_attachment=True, download_name="captcha_dataset.jsonl")
+    return "Dataset empty", 404
+
+# --- Old Captcha Routes (kept for compatibility or internal tools) ---
+
 @app.route('/captcha/solve', methods=['POST'])
 def captcha_solve():
     """Solve a single captcha challenge and save to dataset."""
@@ -538,70 +621,13 @@ def captcha_solve():
 
 @app.route('/captcha/harvest', methods=['POST'])
 def captcha_harvest():
-    """Harvest multiple captchas from sample challenges."""
-    if 'api_key' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.json
-    count = data.get('count', 10)
-    provider = data.get('provider', 'openai')
-    model = data.get('model', 'gpt-4.1-nano')
-    
-    api_key = get_provider_key(provider, 'captcha')
-    if not api_key:
-        return jsonify({"error": f"{provider.capitalize()} API key not configured for Captcha. Please add it in Settings."}), 400
-    
-    try:
-        from captcha_harvester import generate_multiple_captchas
-        
-        results = generate_multiple_captchas(api_key, count, model, provider)
-        
-        return jsonify({
-            "success": True,
-            "harvested": len(results),
-            "results": results
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """DEPRECATED: Use real challenge capture."""
+    return jsonify({"error": "This feature has been replaced by real challenge capture and the Dataset Manager."}), 410
 
 @app.route('/captcha/batch', methods=['POST'])
 def captcha_batch():
-    """Harvest captchas from n random unresponded posts."""
-    if 'api_key' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.json
-    n = data.get('n', 10)
-    lean_niche = data.get('lean_niche', True)
-    provider = data.get('provider', 'openai')
-    model = data.get('model', 'gpt-4.1-nano')
-    
-    api_key = session.get('api_key')
-    ai_key = get_provider_key(provider, 'captcha')
-    
-    if not ai_key:
-        return jsonify({"error": f"{provider.capitalize()} API key not configured for Captcha. Please add it in Settings."}), 400
-    
-    try:
-        from captcha_harvester import fetch_random_posts, harvest_captchas_from_posts
-        
-        # Fetch random posts
-        posts = fetch_random_posts(api_key, n, lean_niche)
-        
-        if not posts:
-            return jsonify({"error": "No unresponded posts found"}), 404
-        
-        # Harvest captchas from posts
-        results = harvest_captchas_from_posts(api_key, ai_key, posts, model, provider)
-        
-        return jsonify({
-            "success": True,
-            "posts_found": len(posts),
-            "harvested": len([r for r in results if 'answer' in r]),
-            "results": results
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """DEPRECATED: Use real challenge capture."""
+    return jsonify({"error": "This feature has been replaced by real challenge capture and the Dataset Manager."}), 410
 
 @app.route('/captcha/dataset', methods=['GET'])
 def captcha_dataset():
@@ -904,8 +930,13 @@ def mass_drafts_approve():
             challenge = resp_data.get('challenge')
             verification_code = resp_data.get('verification_code')
             
-            if challenge and session.get('auto_solve_captcha'):
-                # Get captcha AI settings
+            if challenge:
+                # Log the real challenge for the dataset manager
+                from captcha_harvester import log_captured_challenge
+                log_captured_challenge(challenge, verification_code, post_id)
+                
+                if session.get('auto_solve_captcha'):
+                    # Get captcha AI settings
                 captcha_provider = session.get('captcha_ai_provider', 'openai')
                 captcha_model = session.get('captcha_model', 'gpt-4.1-nano')
                 ai_key = get_provider_key(captcha_provider, 'captcha')

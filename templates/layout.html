@@ -30,6 +30,10 @@
           <ul class="dropdown-menu" aria-labelledby="extrasDropdown">
             <li><a class="dropdown-item" href="{{ url_for('mass_drafts') }}"><i class="bi bi-file-earmark-text"></i> Draft-gen</a></li>
             <li><a class="dropdown-item" href="{{ url_for('captcha_demo') }}"><i class="bi bi-robot"></i> Captcha Demo</a></li>
+            {% if session.get('enable_captcha_harvesting') %}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('dataset_manager') }}"><i class="bi bi-database"></i> Dataset Manager</a></li>
+            {% endif %}
           </ul>
         </li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('info') }}">About</a></li>

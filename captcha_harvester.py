@@ -215,66 +215,18 @@ def fetch_random_posts(
         return []
 
 
-def harvest_captchas_from_posts(
-    api_key: str,
-    openai_api_key: str,
-    posts: List[Dict],
-    model: str = "gpt-4.1-nano",
-    provider: str = "openai"
-) -> List[Dict]:
-    """Harvest captchas from a list of posts."""
-    results = []
-    
-    for post in posts:
-        # Generate a captcha from post content (or use sample if no content)
-        content = post.get('content', '') or post.get('title', '')
-        
-        # Create a captcha based on post content or use sample
-        if content and len(content) > 10:
-            # Create a math problem from post metrics
-            score = post.get('score', 0)
-            comments_count = len(post.get('comments', []))
-            captcha = f"A] PoSt] HaS] {score} ] UpVoTeS] AnD] {comments_count} ] CoMmEnTs,] WhAtS] ThE] ToTaL?"
-        else:
-            captcha = random.choice(SAMPLE_CHALLENGES)
-        
-        try:
-            result = solve_captcha_with_ai(captcha, openai_api_key, model, provider)
-            result['post_id'] = post.get('id')
-            result['post_title'] = post.get('title', '')[:100]
-            save_dataset_entry(result)
-            results.append(result)
-        except Exception as e:
-            print(f"Error solving captcha for post {post.get('id')}: {e}")
-            results.append({
-                'timestamp': datetime.now().isoformat(),
-                'uncleaned': captcha,
-                'error': str(e),
-                'post_id': post.get('id')
-            })
-    
-    return results
-
-
-def generate_multiple_captchas(
-    openai_api_key: str,
-    count: int = 10,
-    model: str = "gpt-4.1-nano",
-    provider: str = "openai"
-) -> List[Dict]:
-    """Generate and solve multiple sample captchas."""
-    results = []
-    
-    for i in range(count):
-        captcha = random.choice(SAMPLE_CHALLENGES)
-        try:
-            result = solve_captcha_with_ai(captcha, openai_api_key, model, provider)
-            save_dataset_entry(result)
-            results.append(result)
-        except Exception as e:
-            print(f"Error on captcha {i+1}: {e}")
-    
-    return results
+def log_captured_challenge(challenge: str, verification_code: str = None, post_id: str = None):
+    """Log a raw challenge encountered in the wild for later dataset assembly."""
+    entry = {
+        'timestamp': datetime.now().isoformat(),
+        'challenge': challenge,
+        'verification_code': verification_code,
+        'post_id': post_id,
+        'status': 'captured'
+    }
+    log_file = DATA_DIR / "captured_challenges.jsonl"
+    with open(log_file, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(entry) + '\n')
 
 
 class DatasetGenerator:
