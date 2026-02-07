@@ -104,13 +104,16 @@ def get_ai_client(provider='openai'):
         return None
         
     if provider == 'openai':
-        return OpenAI(api_key=api_key)
+        return OpenAI(api_key=api_key, base_url="https://api.openai.com/v1")
     elif provider == 'openrouter':
         return OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
     elif provider == 'google':
-        return OpenAI(api_key=api_key, base_url="https://models.dev/api/google")
+        # Using Google's OpenAI-compatible endpoint
+        return OpenAI(api_key=api_key, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
     elif provider == 'poe':
-        return OpenAI(api_key=api_key, base_url="https://models.dev/api/poe")
+        # Poe doesn't have a direct OpenAI-compatible base URL by default, 
+        # using a placeholder or common proxy pattern if required.
+        return OpenAI(api_key=api_key, base_url="https://api.poe.com/v1")
         
     return None
 

@@ -96,11 +96,16 @@ Write a compressed reasoning process first, in <compressed> tags, then write the
     elif provider == "poe":
         client = OpenAI(
             api_key=api_key,
-            base_url="https://models.dev/api/poe"
+            base_url="https://api.poe.com/v1"
         )
         # Strip provider prefix for Poe if present
         if '/' in model:
             model = model.split('/')[-1]
+    elif provider == "google":
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
     
