@@ -74,15 +74,14 @@ def is_safe_url(url):
 
 app.jinja_env.tests['safe_url'] = is_safe_url
 
-def get_ai_client(provider='openai'):
-    # Determine the correct API key based on provider and purpose (drafting/captcha/shared)
-    # For simplicity in this helper, we'll try purpose-specific then shared
+def get_provider_key(provider, purpose='draft'):
+    # purpose can be 'draft', 'captcha', or 'shared'
     
     key_map = {
-        'openai': ['draft_openai_api_key', 'shared_openai_api_key'],
-        'openrouter': ['draft_openrouter_api_key', 'shared_openrouter_api_key'],
-        'google': ['draft_google_api_key', 'shared_google_api_key'],
-        'poe': ['draft_poe_api_key', 'shared_poe_api_key']
+        'openai': [f'{purpose}_openai_api_key', 'shared_openai_api_key'],
+        'openrouter': [f'{purpose}_openrouter_api_key', 'shared_openrouter_api_key'],
+        'google': [f'{purpose}_google_api_key', 'shared_google_api_key'],
+        'poe': [f'{purpose}_poe_api_key', 'shared_poe_api_key']
     }
     
     api_key = None
@@ -91,7 +90,6 @@ def get_ai_client(provider='openai'):
         if api_key: break
         
     if not api_key:
-        # Final fallback to environment variables
         env_map = {
             'openai': 'OPENAI_API_KEY',
             'openrouter': 'OPENROUTER_API_KEY',
@@ -99,7 +97,10 @@ def get_ai_client(provider='openai'):
             'poe': 'POE_API_KEY'
         }
         api_key = os.getenv(env_map.get(provider, ''))
+    return api_key
 
+def get_ai_client(provider='openai', purpose='draft'):
+    api_key = get_provider_key(provider, purpose)
     if not api_key:
         return None
         
@@ -108,11 +109,8 @@ def get_ai_client(provider='openai'):
     elif provider == 'openrouter':
         return OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
     elif provider == 'google':
-        # Using Google's OpenAI-compatible endpoint
         return OpenAI(api_key=api_key, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
     elif provider == 'poe':
-        # Poe doesn't have a direct OpenAI-compatible base URL by default, 
-        # using a placeholder or common proxy pattern if required.
         return OpenAI(api_key=api_key, base_url="https://api.poe.com/v1")
         
     return None
@@ -467,14 +465,14 @@ def captcha_solve():
     if not challenge:
         return jsonify({"error": "No challenge provided"}), 400
     
-    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
-    if not openai_key:
-        return jsonify({"error": "OpenAI API key not configured"}), 400
+    api_key = get_provider_key(provider, 'captcha')
+    if not api_key:
+        return jsonify({"error": f"{provider.capitalize()} API key not configured for Captcha. Please add it in Settings."}), 400
     
     try:
         from captcha_harvester import solve_captcha_with_ai, save_dataset_entry
         
-        result = solve_captcha_with_ai(challenge, openai_key, model, provider)
+        result = solve_captcha_with_ai(challenge, api_key, model, provider)
         save_dataset_entry(result)
         
         return jsonify({
@@ -503,14 +501,14 @@ def captcha_harvest():
     provider = data.get('provider', 'openai')
     model = data.get('model', 'gpt-4.1-nano')
     
-    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
-    if not openai_key:
-        return jsonify({"error": "OpenAI API key not configured"}), 400
+    api_key = get_provider_key(provider, 'captcha')
+    if not api_key:
+        return jsonify({"error": f"{provider.capitalize()} API key not configured for Captcha. Please add it in Settings."}), 400
     
     try:
         from captcha_harvester import generate_multiple_captchas
         
-        results = generate_multiple_captchas(openai_key, count, model, provider)
+        results = generate_multiple_captchas(api_key, count, model, provider)
         
         return jsonify({
             "success": True,
@@ -533,10 +531,10 @@ def captcha_batch():
     model = data.get('model', 'gpt-4.1-nano')
     
     api_key = session.get('api_key')
-    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+    ai_key = get_provider_key(provider, 'captcha')
     
-    if not openai_key:
-        return jsonify({"error": "OpenAI API key not configured"}), 400
+    if not ai_key:
+        return jsonify({"error": f"{provider.capitalize()} API key not configured for Captcha. Please add it in Settings."}), 400
     
     try:
         from captcha_harvester import fetch_random_posts, harvest_captchas_from_posts
@@ -548,7 +546,7 @@ def captcha_batch():
             return jsonify({"error": "No unresponded posts found"}), 404
         
         # Harvest captchas from posts
-        results = harvest_captchas_from_posts(api_key, openai_key, posts, model, provider)
+        results = harvest_captchas_from_posts(api_key, ai_key, posts, model, provider)
         
         return jsonify({
             "success": True,
@@ -742,11 +740,12 @@ def mass_drafts_generate():
     lean_niche = data.get('lean_niche', True)
     
     api_key = session.get('api_key')
-    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+    provider = session.get('draft_ai_provider', 'openai')
     personality = session.get('agent_personality', DEFAULT_PERSONALITY)
     
-    if not openai_key:
-        return jsonify({"error": "OpenAI API key not configured. Please add it in Settings."}), 400
+    client = get_ai_client(provider)
+    if not client:
+        return jsonify({"error": f"{provider.capitalize()} API key not configured. Please add it in Settings."}), 400
     
     try:
         from captcha_harvester import fetch_random_posts, generate_drafts_for_posts
@@ -757,10 +756,11 @@ def mass_drafts_generate():
         if not posts:
             return jsonify({"error": "No unresponded posts found"}), 404
         
-        # Generate drafts using settings from session
-        client = get_ai_client()
-        if not client:
-            return jsonify({"error": "AI client not configured. Set OpenAI API key in Settings."}), 400
+        model = session.get('draft_model', 'gpt-4o-mini')
+        
+        # Strip provider prefix for Poe
+        if provider == 'poe' and '/' in model:
+            model = model.split('/')[-1]
         
         # Generate drafts manually using the client from settings
         drafts = []
@@ -777,7 +777,7 @@ def mass_drafts_generate():
                 prompt = "Write a thoughtful, engaging comment response to this post. Be concise (1-3 sentences), authentic, and add value to the conversation."
                 
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model=model,
                     messages=[
                         {"role": "system", "content": f"You are an AI agent on Moltbook. Personality: {personality}"},
                         {"role": "user", "content": f"Context: {context}\n\nTask: {prompt}"}

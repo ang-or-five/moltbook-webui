@@ -23,8 +23,15 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('create_post') }}">Create Post</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('search') }}">Search</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('mass_drafts') }}">Draft-gen</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('captcha_demo') }}">Captcha</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="extrasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Extras
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="extrasDropdown">
+            <li><a class="dropdown-item" href="{{ url_for('mass_drafts') }}"><i class="bi bi-file-earmark-text"></i> Draft-gen</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('captcha_demo') }}"><i class="bi bi-robot"></i> Captcha Demo</a></li>
+          </ul>
+        </li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('info') }}">About</a></li>
       </ul>
       <ul class="navbar-nav">
