@@ -546,31 +546,47 @@ def api_models(provider):
             except Exception as e:
                 return jsonify({"error": f"OpenRouter API error: {str(e)}"}), 500
         
-        # Fetch from models.dev for OpenAI
-        if provider == 'openai':
+        # Fetch from models.dev for supported providers
+        models_dev_providers = {
+            'openai': ['openai', 'OpenAI'],
+            'google': ['google', 'Google', 'google-ai', 'googleai'],
+            'poe': ['poe', 'Poe', 'POE']
+        }
+        
+        if provider in models_dev_providers:
             try:
                 resp = http_session.get('https://models.dev/api.json', timeout=10)
                 if resp.status_code == 200:
                     data = resp.json()
                     models = []
-                    # Find OpenAI provider in the schema
-                    openai_provider = data.get('openai') or data.get('OpenAI')
-                    if not openai_provider:
-                        # Try case-insensitive match
+                    # Find provider in the schema (try multiple key variations)
+                    target_provider = None
+                    for key_variation in models_dev_providers[provider]:
+                        if key_variation in data:
+                            target_provider = data[key_variation]
+                            break
+                    
+                    # Try case-insensitive match if not found
+                    if not target_provider:
                         for key, prov in data.items():
-                            if key.lower() == 'openai':
-                                openai_provider = prov
+                            if key.lower() == provider or key.lower() in [p.lower() for p in models_dev_providers[provider]]:
+                                target_provider = prov
                                 break
                     
-                    if openai_provider and 'models' in openai_provider:
-                        provider_models = openai_provider['models']
+                    if target_provider and 'models' in target_provider:
+                        provider_models = target_provider['models']
                         for model_id, model in provider_models.items():
                             # Check if vision is supported from modalities
-                            has_vision = 'image' in model.get('modalities', {}).get('input', [])
+                            modalities = model.get('modalities', {})
+                            has_vision = 'image' in modalities.get('input', []) if isinstance(modalities, dict) else False
+                            
+                            limit = model.get('limit', {})
+                            context_length = limit.get('context', 0) if isinstance(limit, dict) else 0
+                            
                             models.append({
                                 "id": model.get('id', model_id),
                                 "name": model.get('name', model_id),
-                                "context_length": model.get('limit', {}).get('context', 0),
+                                "context_length": context_length,
                                 "reasoning": model.get('reasoning', False),
                                 "vision": has_vision,
                                 "tool_call": model.get('tool_call', False),
@@ -578,15 +594,30 @@ def api_models(provider):
                             })
                         return jsonify({"models": models})
             except Exception as e:
-                print(f"models.dev API error: {e}")
+                print(f"models.dev API error for {provider}: {e}")
                 pass
+            
             # Fallback to hardcoded
-            return jsonify({"models": [
-                {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
-                {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
-                {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
-                {"id": "gpt-4o", "name": "GPT-4o", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
-            ]})
+            fallbacks = {
+                'openai': [
+                    {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gpt-4o", "name": "GPT-4o", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                ],
+                'google': [
+                    {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "context_length": 1000000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro", "context_length": 2000000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash", "context_length": 1000000, "reasoning": False, "vision": True, "tool_call": True},
+                ],
+                'poe': [
+                    {"id": "gpt-5-nano", "name": "GPT-5 Nano (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gpt-5-mini", "name": "GPT-5 Mini (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                    {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                ]
+            }
+            return jsonify({"models": fallbacks.get(provider, [])})
         
         # Default hardcoded models for other providers
         models_map = {
