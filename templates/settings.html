@@ -550,7 +550,15 @@ function buildModelCard(model, isSelected, targetInput) {
 }
 
 function selectModel(inputId, modelId, cardEl) {
-    document.getElementById(inputId).value = modelId;
+    let finalModelId = modelId;
+    // Strip prefix for Poe
+    const providerSelectorId = inputId === 'draftModelSelect' ? 'draftProviderSelector' : 'captchaProviderSelector';
+    const providerEl = document.querySelector(`#${providerSelectorId} input:checked`);
+    if (providerEl && providerEl.value === 'poe' && finalModelId.includes('/')) {
+        finalModelId = finalModelId.split('/').pop();
+    }
+
+    document.getElementById(inputId).value = finalModelId;
     const grid = cardEl.closest('.model-cards-grid');
     grid.querySelectorAll('.model-card').forEach(c => c.classList.remove('model-card-selected'));
     cardEl.classList.add('model-card-selected');
@@ -583,7 +591,9 @@ async function refreshTranslationModels() {
         if (data.models && data.models.length > 0) {
             data.models.forEach(model => {
                 const option = document.createElement('option');
-                option.value = model.id;
+                let finalId = model.id;
+                if (provider === 'poe' && finalId.includes('/')) finalId = finalId.split('/').pop();
+                option.value = finalId;
                 option.label = model.name;
                 datalist.appendChild(option);
             });
@@ -624,7 +634,9 @@ async function refreshModels(provider, datalistId, helpId, inputId, cardsId, ref
 
             data.models.forEach(model => {
                 const option = document.createElement('option');
-                option.value = model.id;
+                let finalId = model.id;
+                if (provider === 'poe' && finalId.includes('/')) finalId = finalId.split('/').pop();
+                option.value = finalId;
                 let label = model.name || model.id;
                 if (model.context_length && model.context_length !== 'Unknown' && model.context_length > 0) {
                     label += ` (${parseInt(model.context_length).toLocaleString()} ctx)`;
