@@ -1,336 +1,359 @@
 {% extends 'layout.html' %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-9">
-        <h1 class="h3 mb-4">Settings</h1>
+<style>
+.settings-container { max-width: 900px; margin: 0 auto; }
+.nav-tabs { border-bottom: 2px solid #e9ecef; margin-bottom: 1.5rem; }
+.nav-tabs .nav-link { border: none; color: #6c757d; font-weight: 500; padding: 0.75rem 1.25rem; margin-right: 0.5rem; }
+.nav-tabs .nav-link:hover { color: #495057; border: none; }
+.nav-tabs .nav-link.active { color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
+.settings-card { background: #fff; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.settings-section { padding: 1.5rem; }
+.settings-section + .settings-section { border-top: 1px solid #e9ecef; }
+.provider-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.provider-pill { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 50px; border: 1px solid #dee2e6; cursor: pointer; transition: all 0.2s; background: #fff; font-size: 0.875rem; }
+.provider-pill:hover { border-color: #0d6efd; background: #f8f9fa; }
+.provider-pill.active { border-color: #0d6efd; background: #0d6efd; color: #fff; }
+.provider-pill.active img { filter: brightness(0) invert(1); }
+.provider-pill input { display: none; }
+.model-picker { display: flex; gap: 0.5rem; align-items: center; }
+.api-key-input { background: #f8f9fa; border: 1px solid #e9ecef; }
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+.feature-card { padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef; }
+.feature-card h6 { font-size: 0.875rem; margin-bottom: 0.75rem; color: #495057; }
+.toggle-group { display: flex; flex-direction: column; gap: 0.75rem; }
+.compact-form-group { margin-bottom: 1rem; }
+.compact-form-group:last-child { margin-bottom: 0; }
+.save-bar { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e9ecef; padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; z-index: 100; }
+.model-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+.model-card { padding: 0.75rem; border-radius: 8px; border: 1px solid #e9ecef; cursor: pointer; transition: all 0.2s; background: #fff; }
+.model-card:hover { border-color: #0d6efd; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.model-card-selected { border-color: #0d6efd; background: #f0f7ff; }
+.model-card-name { font-weight: 500; font-size: 0.875rem; margin-bottom: 0.25rem; }
+.model-card-meta { font-size: 0.75rem; color: #6c757d; }
+.model-card-badges { display: flex; gap: 0.25rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.model-badge { font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; text-transform: uppercase; font-weight: 600; }
+.model-badge-vision { background: #d1ecf1; color: #0c5460; }
+.model-badge-reasoning { background: #fff3cd; color: #856404; }
+.model-badge-tools { background: #d4edda; color: #155724; }
+.model-card-skeleton { height: 70px; border-radius: 8px; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.shimmer-text { background: linear-gradient(90deg, #6c757d 0%, #adb5bd 50%, #6c757d 100%); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer-text 2s linear infinite; }
+@keyframes shimmer-text { to { background-position: 200% center; } }
+.shimmer-text-small { font-size: 0.75rem; }
+.collapse-toggle { cursor: pointer; user-select: none; }
+.collapse-toggle i { transition: transform 0.2s; }
+.collapse-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+</style>
 
-        <!-- Shared API Keys (Collapsed by default) -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white fw-bold d-flex align-items-center justify-content-between"
-                 role="button" data-bs-toggle="collapse" data-bs-target="#sharedKeysBody" aria-expanded="false">
-                <span><i class="fas fa-key"></i> Shared API Keys</span>
-                <i class="fas fa-chevron-down collapse-chevron"></i>
+<div class="settings-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h4 mb-0">Settings</h1>
+    <button type="submit" form="settingsForm" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> Save Changes
+    </button>
+  </div>
+
+  <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai-panel" type="button" role="tab">
+        <i class="bi bi-magic"></i> AI Assistant
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="captcha-tab" data-bs-toggle="tab" data-bs-target="#captcha-panel" type="button" role="tab">
+        <i class="bi bi-shield-check"></i> Captcha
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="general-tab" data-bs-toggle="tab" data-bs-target="#general-panel" type="button" role="tab">
+        <i class="bi bi-gear"></i> General
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="account-tab" data-bs-toggle="tab" data-bs-target="#account-panel" type="button" role="tab">
+        <i class="bi bi-person"></i> Account
+      </button>
+    </li>
+  </ul>
+
+  <form method="POST" id="settingsForm">
+    <div class="tab-content" id="settingsTabContent">
+      
+      <!-- AI Assistant Tab -->
+      <div class="tab-pane fade show active" id="ai-panel" role="tabpanel">
+        <div class="settings-card">
+          <!-- Shared Keys (Collapsed) -->
+          <div class="settings-section">
+            <div class="d-flex align-items-center justify-content-between collapse-toggle" data-bs-toggle="collapse" data-bs-target="#sharedKeysBody" aria-expanded="false">
+              <h6 class="mb-0"><i class="bi bi-key"></i> Shared API Keys</h6>
+              <i class="bi bi-chevron-down"></i>
             </div>
             <div class="collapse" id="sharedKeysBody">
-                <div class="card-body p-4">
-                    <p class="small text-muted mb-3">Fallback keys used when provider-specific keys aren't set below.</p>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small d-flex align-items-center gap-2">
-                                <img src="https://models.dev/logos/openai.svg" alt="" width="16" height="16" class="provider-icon"> OpenAI
-                            </label>
-                            <input type="password" name="shared_openai_api_key" form="settingsForm" class="form-control form-control-sm" value="{{ shared_openai_api_key }}" placeholder="sk-...">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small d-flex align-items-center gap-2">
-                                <img src="https://models.dev/logos/openrouter.svg" alt="" width="16" height="16" class="provider-icon"> OpenRouter
-                            </label>
-                            <input type="password" name="shared_openrouter_api_key" form="settingsForm" class="form-control form-control-sm" value="{{ shared_openrouter_api_key }}" placeholder="sk-or-...">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small d-flex align-items-center gap-2">
-                                <img src="https://models.dev/logos/google.svg" alt="" width="16" height="16" class="provider-icon"> Google AI
-                            </label>
-                            <input type="password" name="shared_google_api_key" form="settingsForm" class="form-control form-control-sm" value="{{ shared_google_api_key }}" placeholder="AIza...">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small d-flex align-items-center gap-2">
-                                <img src="https://models.dev/logos/poe.svg" alt="" width="16" height="16" class="provider-icon"> Poe
-                            </label>
-                            <input type="password" name="shared_poe_api_key" form="settingsForm" class="form-control form-control-sm" value="{{ shared_poe_api_key }}" placeholder="poe-...">
-                        </div>
-                    </div>
+              <p class="text-muted small mt-2 mb-3">Fallback keys used when provider-specific keys aren't set.</p>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label small text-muted">OpenAI</label>
+                  <input type="password" name="shared_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_openai_api_key }}" placeholder="sk-...">
                 </div>
+                <div class="col-md-6">
+                  <label class="form-label small text-muted">OpenRouter</label>
+                  <input type="password" name="shared_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_openrouter_api_key }}" placeholder="sk-or-...">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small text-muted">Google AI</label>
+                  <input type="password" name="shared_google_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_google_api_key }}" placeholder="AIza...">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small text-muted">Poe</label>
+                  <input type="password" name="shared_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_poe_api_key }}" placeholder="poe-...">
+                </div>
+              </div>
             </div>
-        </div>
+          </div>
 
-        <form method="POST" id="settingsForm">
-        <!-- Drafting AI Settings -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white fw-bold">
-                <i class="fas fa-pen-fancy"></i> Drafting AI
+          <!-- Drafting AI -->
+          <div class="settings-section">
+            <h6 class="mb-3"><i class="bi bi-pen"></i> Drafting AI</h6>
+            
+            <div class="compact-form-group">
+              <label class="form-label small text-muted">Provider</label>
+              <div class="provider-pills" id="draftProviderSelector">
+                <label class="provider-pill {% if draft_ai_provider == 'openai' or not draft_ai_provider %}active{% endif %}">
+                  <input type="radio" name="draft_ai_provider" value="openai" {% if draft_ai_provider == 'openai' or not draft_ai_provider %}checked{% endif %} onchange="handleDraftProviderChange()">
+                  <img src="https://models.dev/logos/openai.svg" alt="" width="16" height="16">
+                  <span>OpenAI</span>
+                </label>
+                <label class="provider-pill {% if draft_ai_provider == 'openrouter' %}active{% endif %}">
+                  <input type="radio" name="draft_ai_provider" value="openrouter" {% if draft_ai_provider == 'openrouter' %}checked{% endif %} onchange="handleDraftProviderChange()">
+                  <img src="https://models.dev/logos/openrouter.svg" alt="" width="16" height="16">
+                  <span>OpenRouter</span>
+                </label>
+                <label class="provider-pill {% if draft_ai_provider == 'google' %}active{% endif %}">
+                  <input type="radio" name="draft_ai_provider" value="google" {% if draft_ai_provider == 'google' %}checked{% endif %} onchange="handleDraftProviderChange()">
+                  <img src="https://models.dev/logos/google.svg" alt="" width="16" height="16">
+                  <span>Google</span>
+                </label>
+                <label class="provider-pill {% if draft_ai_provider == 'poe' %}active{% endif %}">
+                  <input type="radio" name="draft_ai_provider" value="poe" {% if draft_ai_provider == 'poe' %}checked{% endif %} onchange="handleDraftProviderChange()">
+                  <img src="https://models.dev/logos/poe.svg" alt="" width="16" height="16">
+                  <span>Poe</span>
+                </label>
+              </div>
             </div>
-            <div class="card-body p-4">
-                <!-- Provider Selection as visual cards -->
-                <label class="form-label fw-bold small mb-2">Provider</label>
-                <div class="provider-selector mb-4" id="draftProviderSelector">
-                    <label class="provider-option {% if draft_ai_provider == 'openai' or not draft_ai_provider %}active{% endif %}">
-                        <input type="radio" name="draft_ai_provider" value="openai" {% if draft_ai_provider == 'openai' or not draft_ai_provider %}checked{% endif %} onchange="handleDraftProviderChange()">
-                        <img src="https://models.dev/logos/openai.svg" alt="OpenAI" width="20" height="20" class="provider-icon">
-                        <span>OpenAI</span>
-                    </label>
-                    <label class="provider-option {% if draft_ai_provider == 'openrouter' %}active{% endif %}">
-                        <input type="radio" name="draft_ai_provider" value="openrouter" {% if draft_ai_provider == 'openrouter' %}checked{% endif %} onchange="handleDraftProviderChange()">
-                        <img src="https://models.dev/logos/openrouter.svg" alt="OpenRouter" width="20" height="20" class="provider-icon">
-                        <span>OpenRouter</span>
-                    </label>
-                    <label class="provider-option {% if draft_ai_provider == 'google' %}active{% endif %}">
-                        <input type="radio" name="draft_ai_provider" value="google" {% if draft_ai_provider == 'google' %}checked{% endif %} onchange="handleDraftProviderChange()">
-                        <img src="https://models.dev/logos/google.svg" alt="Google" width="20" height="20" class="provider-icon">
-                        <span>Google AI</span>
-                    </label>
-                    <label class="provider-option {% if draft_ai_provider == 'poe' %}active{% endif %}">
-                        <input type="radio" name="draft_ai_provider" value="poe" {% if draft_ai_provider == 'poe' %}checked{% endif %} onchange="handleDraftProviderChange()">
-                        <img src="https://models.dev/logos/poe.svg" alt="Poe" width="20" height="20" class="provider-icon">
-                        <span>Poe</span>
-                    </label>
-                </div>
 
-                <!-- Draft Specific API Keys -->
-                <div id="draftOpenaiKeySection" class="mb-3 {% if draft_ai_provider != 'openai' and draft_ai_provider %}d-none{% endif %}">
-                    <label class="form-label small">OpenAI API Key <span class="text-muted">(optional, uses shared)</span></label>
-                    <input type="password" name="draft_openai_api_key" class="form-control form-control-sm" value="{{ draft_openai_api_key }}" placeholder="Uses shared key if empty">
-                </div>
-                <div id="draftOpenrouterKeySection" class="mb-3 {% if draft_ai_provider != 'openrouter' %}d-none{% endif %}">
-                    <label class="form-label small">OpenRouter API Key <span class="text-muted">(optional)</span></label>
-                    <input type="password" name="draft_openrouter_api_key" class="form-control form-control-sm" value="{{ draft_openrouter_api_key }}" placeholder="Uses shared key if empty">
-                </div>
-                <div id="draftGoogleKeySection" class="mb-3 {% if draft_ai_provider != 'google' %}d-none{% endif %}">
-                    <label class="form-label small">Google AI API Key <span class="text-muted">(optional)</span></label>
-                    <input type="password" name="draft_google_api_key" class="form-control form-control-sm" value="{{ draft_google_api_key }}" placeholder="Uses shared key if empty">
-                </div>
-                <div id="draftPoeKeySection" class="{% if draft_ai_provider != 'poe' %}d-none{% endif %}">
-                    <div class="mb-3">
-                        <label class="form-label small">Poe API Key <span class="text-muted">(optional)</span></label>
-                        <input type="password" name="draft_poe_api_key" class="form-control form-control-sm" value="{{ draft_poe_api_key }}" placeholder="Uses shared key if empty">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Reasoning Effort</label>
-                        <select name="draft_poe_reasoning_effort" class="form-select form-select-sm">
-                            <option value="none" {% if draft_poe_reasoning_effort == 'none' %}selected{% endif %}>None</option>
-                            <option value="low" {% if draft_poe_reasoning_effort == 'low' %}selected{% endif %}>Low</option>
-                            <option value="medium" {% if draft_poe_reasoning_effort == 'medium' %}selected{% endif %}>Medium</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Model Selection -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">Model</label>
-                    <div class="input-group input-group-sm">
-                        <input list="draftModelList" name="draft_model" id="draftModelSelect" class="form-control" value="{{ draft_model }}" placeholder="Select or type a model ID...">
-                        <datalist id="draftModelList">
-                            {% for model in draft_available_models %}
-                            <option value="{{ model.id }}" label="{{ model.name }} {% if model.context_length %}({{ '{:,}'.format(model.context_length) }} ctx){% endif %}">
-                            {% endfor %}
-                        </datalist>
-                        <button type="button" class="btn btn-outline-secondary" onclick="refreshDraftModels()" id="draftRefreshBtn">
-                            <i class="bi bi-arrow-repeat"></i>
-                        </button>
-                    </div>
-                    <div class="form-text small" id="draftModelHelp">
-                        <span class="shimmer-text shimmer-text-small">Loading models...</span>
-                    </div>
-                </div>
-
-                <!-- Model cards grid -->
-                <div id="draftModelCards" class="model-cards-grid mb-3"></div>
-
-                <!-- Personality -->
-                <div class="mb-0">
-                    <label class="form-label fw-bold small">Agent Personality / Voice</label>
-                    <textarea name="agent_personality" class="form-control form-control-sm" rows="2" placeholder="e.g. Helpful, technical, and curious.">{{ agent_personality }}</textarea>
-                    <div class="form-text small">Guides how the AI drafts content for you.</div>
-                </div>
+            <div id="draftOpenaiKeySection" class="compact-form-group {% if draft_ai_provider != 'openai' and draft_ai_provider %}d-none{% endif %}">
+              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+              <input type="password" name="draft_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_openai_api_key }}" placeholder="Uses shared key if empty">
             </div>
-        </div>
-
-        <!-- Captcha Solver AI -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white fw-bold">
-                <i class="fas fa-robot"></i> Captcha Solver AI
+            <div id="draftOpenrouterKeySection" class="compact-form-group {% if draft_ai_provider != 'openrouter' %}d-none{% endif %}">
+              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+              <input type="password" name="draft_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_openrouter_api_key }}" placeholder="Uses shared key if empty">
             </div>
-            <div class="card-body p-4">
-                <!-- Provider Selection -->
-                <label class="form-label fw-bold small mb-2">Provider</label>
-                <div class="provider-selector mb-4" id="captchaProviderSelector">
-                    <label class="provider-option {% if captcha_ai_provider == 'openai' or not captcha_ai_provider %}active{% endif %}">
-                        <input type="radio" name="captcha_ai_provider" value="openai" {% if captcha_ai_provider == 'openai' or not captcha_ai_provider %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                        <img src="https://models.dev/logos/openai.svg" alt="OpenAI" width="20" height="20" class="provider-icon">
-                        <span>OpenAI</span>
-                    </label>
-                    <label class="provider-option {% if captcha_ai_provider == 'openrouter' %}active{% endif %}">
-                        <input type="radio" name="captcha_ai_provider" value="openrouter" {% if captcha_ai_provider == 'openrouter' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                        <img src="https://models.dev/logos/openrouter.svg" alt="OpenRouter" width="20" height="20" class="provider-icon">
-                        <span>OpenRouter</span>
-                    </label>
-                    <label class="provider-option {% if captcha_ai_provider == 'google' %}active{% endif %}">
-                        <input type="radio" name="captcha_ai_provider" value="google" {% if captcha_ai_provider == 'google' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                        <img src="https://models.dev/logos/google.svg" alt="Google" width="20" height="20" class="provider-icon">
-                        <span>Google AI</span>
-                    </label>
-                    <label class="provider-option {% if captcha_ai_provider == 'poe' %}active{% endif %}">
-                        <input type="radio" name="captcha_ai_provider" value="poe" {% if captcha_ai_provider == 'poe' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                        <img src="https://models.dev/logos/poe.svg" alt="Poe" width="20" height="20" class="provider-icon">
-                        <span>Poe</span>
-                    </label>
-                </div>
-
-                <!-- Captcha API Keys -->
-                <div id="captchaOpenaiKeySection" class="mb-3 {% if captcha_ai_provider != 'openai' and captcha_ai_provider %}d-none{% endif %}">
-                    <label class="form-label small">OpenAI API Key <span class="text-muted">(optional)</span></label>
-                    <input type="password" name="captcha_openai_api_key" class="form-control form-control-sm" value="{{ captcha_openai_api_key }}" placeholder="Uses shared key if empty">
-                </div>
-                <div id="captchaOpenrouterKeySection" class="mb-3 {% if captcha_ai_provider != 'openrouter' %}d-none{% endif %}">
-                    <label class="form-label small">OpenRouter API Key <span class="text-muted">(optional)</span></label>
-                    <input type="password" name="captcha_openrouter_api_key" class="form-control form-control-sm" value="{{ captcha_openrouter_api_key }}" placeholder="Uses shared key if empty">
-                </div>
-                <div id="captchaGoogleKeySection" class="mb-3 {% if captcha_ai_provider != 'google' %}d-none{% endif %}">
-                    <label class="form-label small">Google AI API Key <span class="text-muted">(optional)</span></label>
-                    <input type="password" name="captcha_google_api_key" class="form-control form-control-sm" value="{{ captcha_google_api_key }}" placeholder="Uses shared key if empty">
-                </div>
-                <div id="captchaPoeKeySection" class="{% if captcha_ai_provider != 'poe' %}d-none{% endif %}">
-                    <div class="mb-3">
-                        <label class="form-label small">Poe API Key <span class="text-muted">(optional)</span></label>
-                        <input type="password" name="captcha_poe_api_key" class="form-control form-control-sm" value="{{ captcha_poe_api_key }}" placeholder="Uses shared key if empty">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Reasoning Effort</label>
-                        <select name="captcha_poe_reasoning_effort" class="form-select form-select-sm">
-                            <option value="none" {% if captcha_poe_reasoning_effort == 'none' %}selected{% endif %}>None</option>
-                            <option value="low" {% if captcha_poe_reasoning_effort == 'low' %}selected{% endif %}>Low</option>
-                            <option value="medium" {% if captcha_poe_reasoning_effort == 'medium' %}selected{% endif %}>Medium</option>
-                        </select>
-                    </div>
-                    <div class="alert alert-success py-2 small mb-3">
-                        <i class="fas fa-star"></i> <strong>Tip:</strong> GPT-5 Nano on Poe is the best &amp; cheapest for captchas.
-                    </div>
-                </div>
-
-                <!-- Model Selection -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">Model</label>
-                    <div class="input-group input-group-sm">
-                        <input list="captchaModelList" name="captcha_model" id="captchaModelSelect" class="form-control" value="{{ captcha_model }}" placeholder="Select or type a model ID...">
-                        <datalist id="captchaModelList">
-                            {% for model in captcha_available_models %}
-                            <option value="{{ model.id }}" label="{{ model.name }} {% if model.context_length %}({{ '{:,}'.format(model.context_length) }} ctx){% endif %}">
-                            {% endfor %}
-                        </datalist>
-                        <button type="button" class="btn btn-outline-secondary" onclick="refreshCaptchaModels()" id="captchaRefreshBtn">
-                            <i class="bi bi-arrow-repeat"></i>
-                        </button>
-                    </div>
-                    <div class="form-text small" id="captchaModelHelp">
-                        <span class="shimmer-text shimmer-text-small">Loading models...</span>
-                    </div>
-                </div>
-
-                <!-- Model cards grid -->
-                <div id="captchaModelCards" class="model-cards-grid mb-3"></div>
-
-                <!-- Toggles -->
-                <div class="d-flex flex-column gap-2">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="auto_solve_captcha" id="auto_solve_captcha" {% if auto_solve_captcha %}checked{% endif %}>
-                        <label class="form-check-label small" for="auto_solve_captcha">Auto-solve challenges</label>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="captcha_preprocessing" id="captcha_preprocessing" {% if captcha_preprocessing is not defined or captcha_preprocessing %}checked{% endif %}>
-                        <label class="form-check-label small" for="captcha_preprocessing">Pre-process challenge text <span class="badge bg-warning text-dark">Beta</span></label>
-                    </div>
-                </div>
+            <div id="draftGoogleKeySection" class="compact-form-group {% if draft_ai_provider != 'google' %}d-none{% endif %}">
+              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+              <input type="password" name="draft_google_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_google_api_key }}" placeholder="Uses shared key if empty">
             </div>
-        </div>
-
-        <!-- General Settings -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white fw-bold">
-                <i class="fas fa-cog"></i> General
+            <div id="draftPoeKeySection" class="{% if draft_ai_provider != 'poe' %}d-none{% endif %}">
+              <div class="compact-form-group">
+                <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+                <input type="password" name="draft_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_poe_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="compact-form-group">
+                <label class="form-label small text-muted">Reasoning</label>
+                <select name="draft_poe_reasoning_effort" class="form-select form-select-sm" style="max-width: 150px;">
+                  <option value="none" {% if draft_poe_reasoning_effort == 'none' %}selected{% endif %}>None</option>
+                  <option value="low" {% if draft_poe_reasoning_effort == 'low' %}selected{% endif %}>Low</option>
+                  <option value="medium" {% if draft_poe_reasoning_effort == 'medium' %}selected{% endif %}>Medium</option>
+                </select>
+              </div>
             </div>
-            <div class="card-body p-4">
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" name="use_easymde" id="use_easymde" {% if use_easymde %}checked{% endif %}>
-                    <label class="form-check-label small" for="use_easymde">Enable Markdown Editor (EasyMDE)</label>
-                </div>
 
-                <hr class="my-3">
-
-                <!-- Translation -->
-                <h6 class="mb-3"><i class="fas fa-language"></i> Translation</h6>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">Provider</label>
-                    <select name="translation_provider" id="translationProvider" class="form-select form-select-sm" onchange="handleTranslationProviderChange()">
-                        <option value="google" {% if translation_provider == 'google' or not translation_provider %}selected{% endif %}>Google Translate (Free)</option>
-                        <option value="openai" {% if translation_provider == 'openai' %}selected{% endif %}>OpenAI</option>
-                        <option value="openrouter" {% if translation_provider == 'openrouter' %}selected{% endif %}>OpenRouter</option>
-                        <option value="google_ai" {% if translation_provider == 'google_ai' %}selected{% endif %}>Google AI (Gemini)</option>
-                        <option value="poe" {% if translation_provider == 'poe' %}selected{% endif %}>Poe</option>
-                    </select>
-                </div>
-
-                <div id="translationModelSection" class="mb-3 {% if translation_provider == 'google' or not translation_provider %}d-none{% endif %}">
-                    <label class="form-label fw-bold small">Translation Model</label>
-                    <div class="input-group input-group-sm">
-                        <input list="translationModelList" name="translation_model" id="translationModelSelect" class="form-control" value="{{ translation_model }}" placeholder="Uses default if empty">
-                        <datalist id="translationModelList">
-                            {% for model in draft_available_models %}
-                            <option value="{{ model.id }}" label="{{ model.name }}">
-                            {% endfor %}
-                        </datalist>
-                        <button type="button" class="btn btn-outline-secondary" onclick="refreshTranslationModels()">
-                            <i class="bi bi-arrow-repeat"></i>
-                        </button>
-                    </div>
-                    <div class="form-text small" id="translationModelHelp">Uses drafting AI provider's key</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex gap-3 mb-4">
-            <button type="submit" class="btn btn-primary px-4">
-                <i class="fas fa-save"></i> Save Settings
-            </button>
-        </div>
-        </form>
-
-        <!-- Captcha Solver Status (hidden by default) -->
-        <div class="card shadow-sm border-0 mb-4" id="captchaCard" style="display: none;">
-            <div class="card-header bg-white fw-bold">
-                <i class="fas fa-robot"></i> Captcha Solver
-                <span class="badge bg-primary float-end" id="captchaStatus">Idle</span>
-            </div>
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <label class="form-label small">Challenge</label>
-                    <div class="p-2 bg-light rounded font-monospace small" id="captchaChallenge"></div>
-                </div>
-                <div class="mb-3" id="cleanedChallengeSection" style="display: none;">
-                    <label class="form-label small text-info"><i class="fas fa-magic"></i> Pre-processed</label>
-                    <div class="p-2 bg-light border border-info rounded font-monospace small" id="captchaCleaned"></div>
-                </div>
-                <div class="progress mb-3" style="height: 6px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated"
-                         id="captchaProgress" role="progressbar" style="width: 0%"></div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-success" id="solveCaptchaBtn" onclick="solveCaptcha()">
-                        <i class="fas fa-play"></i> Auto-Solve
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" id="manualSolveBtn" onclick="showManualSolve()">
-                        <i class="fas fa-hand-pointer"></i> Manual
-                    </button>
-                </div>
-                <div id="manualSolveSection" class="mt-3" style="display: none;">
-                    <input type="text" class="form-control form-control-sm" id="manualAnswer" placeholder="Enter answer (e.g., 47.00)">
-                    <button class="btn btn-sm btn-primary mt-2" onclick="submitManualAnswer()">Submit</button>
-                </div>
-                <div id="captchaResult" class="mt-3 alert" style="display: none;"></div>
-            </div>
-        </div>
-
-        <!-- Account -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white fw-bold"><i class="fas fa-user-shield"></i> Account & Privacy</div>
-            <div class="card-body p-4">
-                <p class="small text-muted mb-3">Your Moltbook API Key is stored in your browser's local storage.</p>
-                <button class="btn btn-outline-danger btn-sm" onclick="clearLocalStorage()">
-                    <i class="fas fa-sign-out-alt"></i> Log out and clear data
+            <div class="compact-form-group">
+              <label class="form-label small text-muted">Model</label>
+              <div class="model-picker">
+                <input list="draftModelList" name="draft_model" id="draftModelSelect" class="form-control form-control-sm" value="{{ draft_model }}" placeholder="Select or type model..." style="flex: 1;">
+                <datalist id="draftModelList">
+                  {% for model in draft_available_models %}
+                  <option value="{{ model.id }}" label="{{ model.name }}">
+                  {% endfor %}
+                </datalist>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDraftModels()" id="draftRefreshBtn">
+                  <i class="bi bi-arrow-repeat"></i>
                 </button>
+              </div>
+              <div class="form-text small text-muted" id="draftModelHelp">
+                <span class="shimmer-text shimmer-text-small">Loading models...</span>
+              </div>
+              <div id="draftModelCards" class="model-cards-grid"></div>
             </div>
+
+            <div class="compact-form-group">
+              <label class="form-label small text-muted">Personality</label>
+              <textarea name="agent_personality" class="form-control form-control-sm" rows="2" placeholder="How should the AI sound?">{{ agent_personality }}</textarea>
+            </div>
+          </div>
+
+          <!-- Translation -->
+          <div class="settings-section">
+            <h6 class="mb-3"><i class="bi bi-translate"></i> Translation</h6>
+            <div class="feature-grid">
+              <div class="feature-card">
+                <label class="form-label small text-muted">Provider</label>
+                <select name="translation_provider" id="translationProvider" class="form-select form-select-sm" onchange="handleTranslationProviderChange()">
+                  <option value="google" {% if translation_provider == 'google' or not translation_provider %}selected{% endif %}>Google Translate (Free)</option>
+                  <option value="openai" {% if translation_provider == 'openai' %}selected{% endif %}>OpenAI</option>
+                  <option value="openrouter" {% if translation_provider == 'openrouter' %}selected{% endif %}>OpenRouter</option>
+                  <option value="google_ai" {% if translation_provider == 'google_ai' %}selected{% endif %}>Google AI</option>
+                  <option value="poe" {% if translation_provider == 'poe' %}selected{% endif %}>Poe</option>
+                </select>
+              </div>
+              <div class="feature-card" id="translationModelSection" {% if translation_provider == 'google' or not translation_provider %}style="display: none;"{% endif %}>
+                <label class="form-label small text-muted">Model</label>
+                <div class="input-group input-group-sm">
+                  <input list="translationModelList" name="translation_model" id="translationModelSelect" class="form-control" value="{{ translation_model }}" placeholder="Default">
+                  <datalist id="translationModelList">
+                    {% for model in draft_available_models %}
+                    <option value="{{ model.id }}" label="{{ model.name }}">
+                    {% endfor %}
+                  </datalist>
+                  <button type="button" class="btn btn-outline-secondary" onclick="refreshTranslationModels()">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
+                </div>
+                <div class="form-text small text-muted" id="translationModelHelp">Uses drafting AI key</div>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- Captcha Tab -->
+      <div class="tab-pane fade" id="captcha-panel" role="tabpanel">
+        <div class="settings-card">
+          <div class="settings-section">
+            <h6 class="mb-3"><i class="bi bi-shield-check"></i> Captcha Solver AI</h6>
+            
+            <div class="compact-form-group">
+              <label class="form-label small text-muted">Provider</label>
+              <div class="provider-pills" id="captchaProviderSelector">
+                <label class="provider-pill {% if captcha_ai_provider == 'openai' or not captcha_ai_provider %}active{% endif %}">
+                  <input type="radio" name="captcha_ai_provider" value="openai" {% if captcha_ai_provider == 'openai' or not captcha_ai_provider %}checked{% endif %} onchange="handleCaptchaProviderChange()">
+                  <img src="https://models.dev/logos/openai.svg" alt="" width="16" height="16">
+                  <span>OpenAI</span>
+                </label>
+                <label class="provider-pill {% if captcha_ai_provider == 'openrouter' %}active{% endif %}">
+                  <input type="radio" name="captcha_ai_provider" value="openrouter" {% if captcha_ai_provider == 'openrouter' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
+                  <img src="https://models.dev/logos/openrouter.svg" alt="" width="16" height="16">
+                  <span>OpenRouter</span>
+                </label>
+                <label class="provider-pill {% if captcha_ai_provider == 'google' %}active{% endif %}">
+                  <input type="radio" name="captcha_ai_provider" value="google" {% if captcha_ai_provider == 'google' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
+                  <img src="https://models.dev/logos/google.svg" alt="" width="16" height="16">
+                  <span>Google</span>
+                </label>
+                <label class="provider-pill {% if captcha_ai_provider == 'poe' %}active{% endif %}">
+                  <input type="radio" name="captcha_ai_provider" value="poe" {% if captcha_ai_provider == 'poe' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
+                  <img src="https://models.dev/logos/poe.svg" alt="" width="16" height="16">
+                  <span>Poe</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="captchaOpenaiKeySection" class="compact-form-group {% if captcha_ai_provider != 'openai' and captcha_ai_provider %}d-none{% endif %}">
+              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+              <input type="password" name="captcha_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_openai_api_key }}" placeholder="Uses shared key if empty">
+            </div>
+            <div id="captchaOpenrouterKeySection" class="compact-form-group {% if captcha_ai_provider != 'openrouter' %}d-none{% endif %}">
+              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+              <input type="password" name="captcha_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_openrouter_api_key }}" placeholder="Uses shared key if empty">
+            </div>
+            <div id="captchaGoogleKeySection" class="compact-form-group {% if captcha_ai_provider != 'google' %}d-none{% endif %}">
+              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+              <input type="password" name="captcha_google_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_google_api_key }}" placeholder="Uses shared key if empty">
+            </div>
+            <div id="captchaPoeKeySection" class="{% if captcha_ai_provider != 'poe' %}d-none{% endif %}">
+              <div class="compact-form-group">
+                <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
+                <input type="password" name="captcha_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_poe_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="compact-form-group">
+                <label class="form-label small text-muted">Reasoning</label>
+                <select name="captcha_poe_reasoning_effort" class="form-select form-select-sm" style="max-width: 150px;">
+                  <option value="none" {% if captcha_poe_reasoning_effort == 'none' %}selected{% endif %}>None</option>
+                  <option value="low" {% if captcha_poe_reasoning_effort == 'low' %}selected{% endif %}>Low</option>
+                  <option value="medium" {% if captcha_poe_reasoning_effort == 'medium' %}selected{% endif %}>Medium</option>
+                </select>
+              </div>
+              <div class="alert alert-info py-2 small">
+                <i class="bi bi-lightbulb"></i> GPT-5 Nano on Poe is best for captchas.
+              </div>
+            </div>
+
+            <div class="compact-form-group">
+              <label class="form-label small text-muted">Model</label>
+              <div class="model-picker">
+                <input list="captchaModelList" name="captcha_model" id="captchaModelSelect" class="form-control form-control-sm" value="{{ captcha_model }}" placeholder="Select or type model..." style="flex: 1;">
+                <datalist id="captchaModelList">
+                  {% for model in captcha_available_models %}
+                  <option value="{{ model.id }}" label="{{ model.name }}">
+                  {% endfor %}
+                </datalist>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshCaptchaModels()" id="captchaRefreshBtn">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+              </div>
+              <div class="form-text small text-muted" id="captchaModelHelp">
+                <span class="shimmer-text shimmer-text-small">Loading models...</span>
+              </div>
+              <div id="captchaModelCards" class="model-cards-grid"></div>
+            </div>
+
+            <div class="toggle-group mt-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="auto_solve_captcha" id="auto_solve_captcha" {% if auto_solve_captcha %}checked{% endif %}>
+                <label class="form-check-label small" for="auto_solve_captcha">Auto-solve challenges</label>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="captcha_preprocessing" id="captcha_preprocessing" {% if captcha_preprocessing is not defined or captcha_preprocessing %}checked{% endif %}>
+                <label class="form-check-label small" for="captcha_preprocessing">Pre-process challenge text <span class="badge bg-warning text-dark">Beta</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- General Tab -->
+      <div class="tab-pane fade" id="general-panel" role="tabpanel">
+        <div class="settings-card">
+          <div class="settings-section">
+            <h6 class="mb-3"><i class="bi bi-gear"></i> Preferences</h6>
+            <div class="toggle-group">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="use_easymde" id="use_easymde" {% if use_easymde %}checked{% endif %}>
+                <label class="form-check-label" for="use_easymde">
+                  <div>Enable Markdown Editor</div>
+                  <div class="form-text">Use EasyMDE for rich text editing</div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Tab -->
+      <div class="tab-pane fade" id="account-panel" role="tabpanel">
+        <div class="settings-card">
+          <div class="settings-section">
+            <h6 class="mb-3"><i class="bi bi-person-lock"></i> Privacy</h6>
+            <p class="text-muted small mb-3">Your Moltbook API Key is stored in your browser's local storage.</p>
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearLocalStorage()">
+              <i class="bi bi-box-arrow-right"></i> Log out and clear data
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+  </form>
 </div>
 
 <script>
@@ -352,8 +375,7 @@ const PROVIDER_LOGOS = {
 function handleDraftProviderChange() {
     const provider = document.querySelector('input[name="draft_ai_provider"]:checked').value;
 
-    // Update active state on provider cards
-    document.querySelectorAll('#draftProviderSelector .provider-option').forEach(el => {
+    document.querySelectorAll('#draftProviderSelector .provider-pill').forEach(el => {
         el.classList.toggle('active', el.querySelector('input').value === provider);
     });
 
@@ -370,7 +392,7 @@ function handleDraftProviderChange() {
 function handleCaptchaProviderChange() {
     const provider = document.querySelector('input[name="captcha_ai_provider"]:checked').value;
 
-    document.querySelectorAll('#captchaProviderSelector .provider-option').forEach(el => {
+    document.querySelectorAll('#captchaProviderSelector .provider-pill').forEach(el => {
         el.classList.toggle('active', el.querySelector('input').value === provider);
     });
 
@@ -388,9 +410,9 @@ function handleTranslationProviderChange() {
     const provider = document.getElementById('translationProvider').value;
     const section = document.getElementById('translationModelSection');
     if (provider === 'google') {
-        section.classList.add('d-none');
+        section.style.display = 'none';
     } else {
-        section.classList.remove('d-none');
+        section.style.display = 'block';
         refreshTranslationModels();
     }
 }
@@ -416,7 +438,6 @@ function buildModelCard(model, isSelected, targetInput) {
 
 function selectModel(inputId, modelId, cardEl) {
     document.getElementById(inputId).value = modelId;
-    // Update selected state
     const grid = cardEl.closest('.model-cards-grid');
     grid.querySelectorAll('.model-card').forEach(c => c.classList.remove('model-card-selected'));
     cardEl.classList.add('model-card-selected');
@@ -475,7 +496,6 @@ async function refreshModels(provider, datalistId, helpId, inputId, cardsId, ref
     input.disabled = true;
     if (refreshBtn) refreshBtn.disabled = true;
 
-    // Show skeleton cards
     cardsContainer.innerHTML = Array(4).fill('<div class="model-card-skeleton"></div>').join('');
 
     try {
@@ -487,7 +507,6 @@ async function refreshModels(provider, datalistId, helpId, inputId, cardsId, ref
 
         if (data.models && data.models.length > 0) {
             const currentValue = input.value;
-            // Limit cards to top 8 most relevant
             const topModels = data.models.slice(0, 8);
 
             data.models.forEach(model => {
@@ -507,7 +526,7 @@ async function refreshModels(provider, datalistId, helpId, inputId, cardsId, ref
                 cardsContainer.innerHTML += buildModelCard(model, isSelected, inputId);
             });
 
-            helpText.textContent = `${data.models.length} models available (or type custom ID)`;
+            helpText.textContent = `${data.models.length} models available`;
         } else {
             helpText.textContent = 'No models found. Enter a custom model ID.';
         }
@@ -518,108 +537,6 @@ async function refreshModels(provider, datalistId, helpId, inputId, cardsId, ref
         input.disabled = false;
         if (refreshBtn) refreshBtn.disabled = false;
     }
-}
-
-/* ── Captcha solving ── */
-function showCaptchaCard(challenge, verificationCode) {
-    currentVerificationCode = verificationCode;
-    document.getElementById('captchaCard').style.display = 'block';
-    document.getElementById('captchaChallenge').textContent = challenge;
-    document.getElementById('captchaStatus').textContent = 'Ready';
-    document.getElementById('captchaStatus').className = 'badge bg-info float-end';
-    document.getElementById('captchaProgress').style.width = '0%';
-    document.getElementById('captchaResult').style.display = 'none';
-    document.getElementById('cleanedChallengeSection').style.display = 'none';
-    document.getElementById('manualSolveSection').style.display = 'none';
-}
-
-async function solveCaptcha() {
-    const challenge = document.getElementById('captchaChallenge').textContent;
-    const btn = document.getElementById('solveCaptchaBtn');
-    const progress = document.getElementById('captchaProgress');
-    const status = document.getElementById('captchaStatus');
-
-    btn.disabled = true;
-    status.innerHTML = '<span class="shimmer-text shimmer-text-small">Solving...</span>';
-    status.className = 'badge bg-light float-end';
-
-    let progressValue = 0;
-    const progressInterval = setInterval(() => {
-        progressValue += Math.random() * 15;
-        if (progressValue > 90) progressValue = 90;
-        progress.style.width = progressValue + '%';
-    }, 300);
-
-    try {
-        const response = await fetch('/captcha/solve', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ challenge, verification_code: currentVerificationCode })
-        });
-
-        clearInterval(progressInterval);
-        const data = await response.json();
-
-        if (data.success) {
-            progress.style.width = '100%';
-            status.textContent = 'Solved!';
-            status.className = 'badge bg-success float-end';
-            if (data.cleaned_text) {
-                document.getElementById('cleanedChallengeSection').style.display = 'block';
-                document.getElementById('captchaCleaned').textContent = data.cleaned_text;
-            }
-            await verifyCaptcha(data.answer);
-        } else {
-            throw new Error(data.error || 'Failed to solve');
-        }
-    } catch (error) {
-        clearInterval(progressInterval);
-        progress.style.width = '0%';
-        status.textContent = 'Failed';
-        status.className = 'badge bg-danger float-end';
-        showResult('Error: ' + error.message, 'danger');
-    } finally {
-        btn.disabled = false;
-    }
-}
-
-function showManualSolve() {
-    document.getElementById('manualSolveSection').style.display = 'block';
-}
-
-async function submitManualAnswer() {
-    const answer = document.getElementById('manualAnswer').value.trim();
-    if (!answer) { showResult('Please enter an answer', 'warning'); return; }
-    await verifyCaptcha(answer);
-}
-
-async function verifyCaptcha(answer) {
-    try {
-        const response = await fetch('/captcha/verify', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ verification_code: currentVerificationCode, answer })
-        });
-        const data = await response.json();
-        if (data.success) {
-            showResult('Verified successfully! ' + data.message, 'success');
-            document.getElementById('captchaStatus').textContent = 'Verified';
-            document.getElementById('captchaStatus').className = 'badge bg-success float-end';
-        } else {
-            throw new Error(data.error || 'Verification failed');
-        }
-    } catch (error) {
-        showResult(error.message, 'danger');
-        document.getElementById('captchaStatus').textContent = 'Failed';
-        document.getElementById('captchaStatus').className = 'badge bg-danger float-end';
-    }
-}
-
-function showResult(message, type) {
-    const div = document.getElementById('captchaResult');
-    div.className = `mt-3 alert alert-${type} small py-2`;
-    div.textContent = message;
-    div.style.display = 'block';
 }
 
 function clearLocalStorage() {
