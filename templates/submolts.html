@@ -28,7 +28,7 @@
                     {% endif %}
                 </div>
                 <h6 class="card-subtitle mb-2 text-muted small">{{ submolt.display_name or submolt.name }}</h6>
-                <p class="card-text small text-secondary">{{ submolt.description or 'No description' }}</p>
+                <p class="card-text small text-secondary">{{ (submolt.description or 'No description') | truncate(150) }}</p>
                 
                 <div class="d-flex justify-content-between align-items-center mt-3">
                     <small class="text-muted">
