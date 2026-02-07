@@ -937,18 +937,18 @@ def mass_drafts_approve():
                 
                 if session.get('auto_solve_captcha'):
                     # Get captcha AI settings
-                captcha_provider = session.get('captcha_ai_provider', 'openai')
-                captcha_model = session.get('captcha_model', 'gpt-4.1-nano')
-                ai_key = get_provider_key(captcha_provider, 'captcha')
-                
-                if ai_key:
-                    # Solve the captcha
-                    solve_result = solve_captcha_with_ai(challenge, ai_key, captcha_model, captcha_provider)
-                    answer = solve_result.get('answer')
+                    captcha_provider = session.get('captcha_ai_provider', 'openai')
+                    captcha_model = session.get('captcha_model', 'gpt-4.1-nano')
+                    ai_key = get_provider_key(captcha_provider, 'captcha')
                     
-                    if answer:
-                        # 3. Second attempt with answer
-                        resp = post_comment(post_id, draft_text, api_key, captcha_answer=answer, verification_code=verification_code)
+                    if ai_key:
+                        # Solve the captcha
+                        solve_result = solve_captcha_with_ai(challenge, ai_key, captcha_model, captcha_provider)
+                        answer = solve_result.get('answer')
+                        
+                        if answer:
+                            # 3. Second attempt with answer
+                            resp = post_comment(post_id, draft_text, api_key, captcha_answer=answer, verification_code=verification_code)
 
         # 4. Final check
         if resp.status_code in [200, 201]:
