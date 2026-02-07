@@ -1,171 +1,224 @@
 {% extends 'layout.html' %}
 {% block content %}
 <style>
-.settings-container { max-width: 900px; margin: 0 auto; }
-.nav-tabs { border-bottom: 2px solid #e9ecef; margin-bottom: 1.5rem; }
-.nav-tabs .nav-link { border: none; color: #6c757d; font-weight: 500; padding: 0.75rem 1.25rem; margin-right: 0.5rem; }
-.nav-tabs .nav-link:hover { color: #495057; border: none; }
-.nav-tabs .nav-link.active { color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
-.settings-card { background: #fff; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-.settings-section { padding: 1.5rem; }
-.settings-section + .settings-section { border-top: 1px solid #e9ecef; }
-.provider-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.provider-pill { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 50px; border: 1px solid #dee2e6; cursor: pointer; transition: all 0.2s; background: #fff; font-size: 0.875rem; }
-.provider-pill:hover { border-color: #0d6efd; background: #f8f9fa; }
-.provider-pill.active { border-color: #0d6efd; background: #0d6efd; color: #fff; }
-.provider-pill.active img { filter: brightness(0) invert(1); }
-.provider-pill input { display: none; }
-.model-picker { display: flex; gap: 0.5rem; align-items: center; }
-.api-key-input { background: #f8f9fa; border: 1px solid #e9ecef; }
-.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
-.feature-card { padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef; }
-.feature-card h6 { font-size: 0.875rem; margin-bottom: 0.75rem; color: #495057; }
-.toggle-group { display: flex; flex-direction: column; gap: 0.75rem; }
-.compact-form-group { margin-bottom: 1rem; }
-.compact-form-group:last-child { margin-bottom: 0; }
-.save-bar { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e9ecef; padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; z-index: 100; }
+/* ── Settings Layout ── */
+.settings-layout { display: flex; gap: 2rem; max-width: 1100px; margin: 0 auto; min-height: 70vh; }
+
+/* ── Sidebar Nav ── */
+.settings-sidebar { width: 220px; flex-shrink: 0; }
+.settings-sidebar .nav { display: flex; flex-direction: column; gap: 0.25rem; position: sticky; top: 1.5rem; }
+.settings-sidebar .nav-link {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 1rem; border-radius: 8px;
+  color: #495057 !important; font-weight: 500; font-size: 0.9rem;
+  transition: all 0.15s; border: 1px solid transparent;
+}
+.settings-sidebar .nav-link:hover { background: #f8f9fa; color: #212529 !important; }
+.settings-sidebar .nav-link.active {
+  background: #0d6efd; color: #fff !important;
+  box-shadow: 0 2px 8px rgba(13,110,253,0.25);
+}
+.settings-sidebar .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; }
+.settings-sidebar-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #adb5bd; font-weight: 600; padding: 0 1rem; margin-bottom: 0.5rem; margin-top: 1rem; }
+
+/* ── Main Content ── */
+.settings-main { flex: 1; min-width: 0; }
+.settings-panel-header { margin-bottom: 1.5rem; }
+.settings-panel-header h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; }
+.settings-panel-header p { color: #6c757d; font-size: 0.875rem; margin: 0; }
+.settings-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04); padding: 1.75rem; margin-bottom: 1.5rem; }
+.settings-card-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+.settings-card-title i { color: #6c757d; }
+.settings-divider { border-top: 1px solid #e9ecef; margin: 1.5rem 0; }
+
+/* ── Provider Radio Cards ── */
+.provider-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; }
+.provider-card {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  padding: 1rem 0.75rem; border-radius: 10px;
+  border: 2px solid #e9ecef; cursor: pointer;
+  transition: all 0.2s; background: #fff; text-align: center;
+}
+.provider-card:hover { border-color: #adb5bd; background: #f8f9fa; }
+.provider-card.active { border-color: #0d6efd; background: #f0f7ff; box-shadow: 0 0 0 3px rgba(13,110,253,0.12); }
+.provider-card input { display: none; }
+.provider-card img { width: 28px; height: 28px; }
+.provider-card.active img { /* keep colored */ }
+.provider-card span { font-size: 0.8rem; font-weight: 500; color: #495057; }
+.provider-card.active span { color: #0d6efd; font-weight: 600; }
+
+/* ── Model Cards Grid ── */
 .model-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
-.model-card { padding: 0.75rem; border-radius: 8px; border: 1px solid #e9ecef; cursor: pointer; transition: all 0.2s; background: #fff; }
-.model-card:hover { border-color: #0d6efd; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.model-card-selected { border-color: #0d6efd; background: #f0f7ff; }
-.model-card-name { font-weight: 500; font-size: 0.875rem; margin-bottom: 0.25rem; }
+.model-card { padding: 0.75rem; border-radius: 8px; border: 2px solid #e9ecef; cursor: pointer; transition: all 0.2s; background: #fff; }
+.model-card:hover { border-color: #adb5bd; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.model-card-selected { border-color: #0d6efd; background: #f0f7ff; box-shadow: 0 0 0 3px rgba(13,110,253,0.1); }
+.model-card-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 0.2rem; }
 .model-card-meta { font-size: 0.75rem; color: #6c757d; }
 .model-card-badges { display: flex; gap: 0.25rem; margin-top: 0.5rem; flex-wrap: wrap; }
-.model-badge { font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; text-transform: uppercase; font-weight: 600; }
+.model-badge { font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 4px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.02em; }
 .model-badge-vision { background: #d1ecf1; color: #0c5460; }
 .model-badge-reasoning { background: #fff3cd; color: #856404; }
 .model-badge-tools { background: #d4edda; color: #155724; }
 .model-card-skeleton { height: 70px; border-radius: 8px; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Form Helpers ── */
 .shimmer-text { background: linear-gradient(90deg, #6c757d 0%, #adb5bd 50%, #6c757d 100%); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer-text 2s linear infinite; }
 @keyframes shimmer-text { to { background-position: 200% center; } }
 .shimmer-text-small { font-size: 0.75rem; }
+.api-key-input { background: #f8f9fa; border: 1px solid #e0e3e6; font-family: monospace; font-size: 0.85rem; }
+.api-key-input:focus { background: #fff; }
+.compact-form-group { margin-bottom: 1.25rem; }
+.compact-form-group:last-child { margin-bottom: 0; }
+.model-picker { display: flex; gap: 0.5rem; align-items: center; }
+.toggle-group { display: flex; flex-direction: column; gap: 0.75rem; }
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+.feature-card { padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef; background: #fafbfc; }
 .collapse-toggle { cursor: pointer; user-select: none; }
-.collapse-toggle i { transition: transform 0.2s; }
-.collapse-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+.collapse-toggle i.bi-chevron-down { transition: transform 0.2s; }
+.collapse-toggle[aria-expanded="true"] i.bi-chevron-down { transform: rotate(180deg); }
+
+/* ── Unsaved Changes Bar ── */
+.unsaved-changes-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #2b2d31;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
+  z-index: 1000;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+.unsaved-changes-bar.visible {
+  transform: translateY(0);
+}
+.unsaved-changes-bar .bar-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.unsaved-changes-bar .unsaved-text {
+  color: #fff;
+  font-weight: 500;
+  margin-right: 1rem;
+}
+.unsaved-changes-bar .btn {
+  padding: 0.5rem 1.25rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.unsaved-changes-bar .btn-secondary {
+  background: transparent;
+  border: 1px solid #6c757d;
+  color: #fff;
+}
+.unsaved-changes-bar .btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+}
+.unsaved-changes-bar .btn-success {
+  background: #248046;
+  border: none;
+}
+.unsaved-changes-bar .btn-success:hover {
+  background: #1b5e35;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .settings-layout { flex-direction: column; gap: 1rem; }
+  .settings-sidebar { width: 100%; }
+  .settings-sidebar .nav { flex-direction: row; overflow-x: auto; gap: 0.5rem; position: static; }
+  .settings-sidebar .nav-link { white-space: nowrap; padding: 0.5rem 0.85rem; font-size: 0.85rem; }
+  .settings-sidebar-title { display: none; }
+  .provider-cards { grid-template-columns: repeat(2, 1fr); }
+  .settings-card { padding: 1.25rem; }
+  .unsaved-changes-bar {
+    padding: 1rem;
+  }
+  .unsaved-changes-bar .unsaved-text {
+    display: none;
+  }
+}
 </style>
 
-<div class="settings-container">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h4 mb-0">Settings</h1>
-    <button type="submit" form="settingsForm" class="btn btn-primary">
-      <i class="bi bi-check-lg"></i> Save Changes
-    </button>
-  </div>
-
-  <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai-panel" type="button" role="tab">
-        <i class="bi bi-magic"></i> AI Assistant
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="captcha-tab" data-bs-toggle="tab" data-bs-target="#captcha-panel" type="button" role="tab">
+<div class="settings-layout">
+  <!-- Sidebar Navigation -->
+  <aside class="settings-sidebar">
+    <div class="settings-sidebar-title">Configuration</div>
+    <nav class="nav flex-column" id="settingsTabs" role="tablist">
+      <a class="nav-link active" id="ai-tab" data-bs-toggle="tab" href="#ai-panel" role="tab">
+        <i class="bi bi-cpu"></i> AI Assistant
+      </a>
+      <a class="nav-link" id="captcha-tab" data-bs-toggle="tab" href="#captcha-panel" role="tab">
         <i class="bi bi-shield-check"></i> Captcha
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="general-tab" data-bs-toggle="tab" data-bs-target="#general-panel" type="button" role="tab">
+      </a>
+      <a class="nav-link" id="keys-tab" data-bs-toggle="tab" href="#keys-panel" role="tab">
+        <i class="bi bi-key"></i> API Keys
+      </a>
+      <div class="settings-sidebar-title">Preferences</div>
+      <a class="nav-link" id="general-tab" data-bs-toggle="tab" href="#general-panel" role="tab">
         <i class="bi bi-gear"></i> General
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="account-tab" data-bs-toggle="tab" data-bs-target="#account-panel" type="button" role="tab">
-        <i class="bi bi-person"></i> Account
-      </button>
-    </li>
-  </ul>
+      </a>
+    </nav>
+  </aside>
 
-  <form method="POST" id="settingsForm">
-    <div class="tab-content" id="settingsTabContent">
-      
-      <!-- AI Assistant Tab -->
-      <div class="tab-pane fade show active" id="ai-panel" role="tabpanel">
-        <div class="settings-card">
-          <!-- Shared Keys (Collapsed) -->
-          <div class="settings-section">
-            <div class="d-flex align-items-center justify-content-between collapse-toggle" data-bs-toggle="collapse" data-bs-target="#sharedKeysBody" aria-expanded="false">
-              <h6 class="mb-0"><i class="bi bi-key"></i> Shared API Keys</h6>
-              <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse" id="sharedKeysBody">
-              <p class="text-muted small mt-2 mb-3">Fallback keys used when provider-specific keys aren't set.</p>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label small text-muted">OpenAI</label>
-                  <input type="password" name="shared_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_openai_api_key }}" placeholder="sk-...">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small text-muted">OpenRouter</label>
-                  <input type="password" name="shared_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_openrouter_api_key }}" placeholder="sk-or-...">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small text-muted">Google AI</label>
-                  <input type="password" name="shared_google_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_google_api_key }}" placeholder="AIza...">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small text-muted">Poe</label>
-                  <input type="password" name="shared_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_poe_api_key }}" placeholder="poe-...">
-                </div>
-              </div>
-            </div>
+  <!-- Main Content -->
+  <main class="settings-main">
+    <form method="POST" id="settingsForm">
+      <div class="tab-content" id="settingsTabContent">
+
+        <!-- ═══════ AI Assistant Panel ═══════ -->
+        <div class="tab-pane fade show active" id="ai-panel" role="tabpanel">
+          <div class="settings-panel-header">
+            <h2>AI Assistant</h2>
+            <p>Configure your drafting AI, models, and translation settings.</p>
           </div>
 
           <!-- Drafting AI -->
-          <div class="settings-section">
-            <h6 class="mb-3"><i class="bi bi-pen"></i> Drafting AI</h6>
-            
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-pen"></i> Drafting AI</div>
+
             <div class="compact-form-group">
               <label class="form-label small text-muted">Provider</label>
-              <div class="provider-pills" id="draftProviderSelector">
-                <label class="provider-pill {% if draft_ai_provider == 'openai' or not draft_ai_provider %}active{% endif %}">
+              <div class="provider-cards" id="draftProviderSelector">
+                <label class="provider-card {% if draft_ai_provider == 'openai' or not draft_ai_provider %}active{% endif %}">
                   <input type="radio" name="draft_ai_provider" value="openai" {% if draft_ai_provider == 'openai' or not draft_ai_provider %}checked{% endif %} onchange="handleDraftProviderChange()">
-                  <img src="https://models.dev/logos/openai.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/openai.svg" alt="">
                   <span>OpenAI</span>
                 </label>
-                <label class="provider-pill {% if draft_ai_provider == 'openrouter' %}active{% endif %}">
+                <label class="provider-card {% if draft_ai_provider == 'openrouter' %}active{% endif %}">
                   <input type="radio" name="draft_ai_provider" value="openrouter" {% if draft_ai_provider == 'openrouter' %}checked{% endif %} onchange="handleDraftProviderChange()">
-                  <img src="https://models.dev/logos/openrouter.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/openrouter.svg" alt="">
                   <span>OpenRouter</span>
                 </label>
-                <label class="provider-pill {% if draft_ai_provider == 'google' %}active{% endif %}">
+                <label class="provider-card {% if draft_ai_provider == 'google' %}active{% endif %}">
                   <input type="radio" name="draft_ai_provider" value="google" {% if draft_ai_provider == 'google' %}checked{% endif %} onchange="handleDraftProviderChange()">
-                  <img src="https://models.dev/logos/google.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/google.svg" alt="">
                   <span>Google</span>
                 </label>
-                <label class="provider-pill {% if draft_ai_provider == 'poe' %}active{% endif %}">
+                <label class="provider-card {% if draft_ai_provider == 'poe' %}active{% endif %}">
                   <input type="radio" name="draft_ai_provider" value="poe" {% if draft_ai_provider == 'poe' %}checked{% endif %} onchange="handleDraftProviderChange()">
-                  <img src="https://models.dev/logos/poe.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/poe.svg" alt="">
                   <span>Poe</span>
                 </label>
               </div>
             </div>
 
-            <div id="draftOpenaiKeySection" class="compact-form-group {% if draft_ai_provider != 'openai' and draft_ai_provider %}d-none{% endif %}">
-              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-              <input type="password" name="draft_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_openai_api_key }}" placeholder="Uses shared key if empty">
-            </div>
-            <div id="draftOpenrouterKeySection" class="compact-form-group {% if draft_ai_provider != 'openrouter' %}d-none{% endif %}">
-              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-              <input type="password" name="draft_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_openrouter_api_key }}" placeholder="Uses shared key if empty">
-            </div>
-            <div id="draftGoogleKeySection" class="compact-form-group {% if draft_ai_provider != 'google' %}d-none{% endif %}">
-              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-              <input type="password" name="draft_google_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_google_api_key }}" placeholder="Uses shared key if empty">
-            </div>
-            <div id="draftPoeKeySection" class="{% if draft_ai_provider != 'poe' %}d-none{% endif %}">
-              <div class="compact-form-group">
-                <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-                <input type="password" name="draft_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_poe_api_key }}" placeholder="Uses shared key if empty">
-              </div>
-              <div class="compact-form-group">
-                <label class="form-label small text-muted">Reasoning</label>
-                <select name="draft_poe_reasoning_effort" class="form-select form-select-sm" style="max-width: 150px;">
-                  <option value="none" {% if draft_poe_reasoning_effort == 'none' %}selected{% endif %}>None</option>
-                  <option value="low" {% if draft_poe_reasoning_effort == 'low' %}selected{% endif %}>Low</option>
-                  <option value="medium" {% if draft_poe_reasoning_effort == 'medium' %}selected{% endif %}>Medium</option>
-                </select>
-              </div>
+            <div class="settings-divider"></div>
+
+            <div id="draftPoeReasoningSection" class="compact-form-group {% if draft_ai_provider != 'poe' %}d-none{% endif %}">
+              <label class="form-label small text-muted">Reasoning</label>
+              <select name="draft_poe_reasoning_effort" class="form-select form-select-sm" style="max-width: 150px;">
+                <option value="none" {% if draft_poe_reasoning_effort == 'none' %}selected{% endif %}>None</option>
+                <option value="low" {% if draft_poe_reasoning_effort == 'low' %}selected{% endif %}>Low</option>
+                <option value="medium" {% if draft_poe_reasoning_effort == 'medium' %}selected{% endif %}>Medium</option>
+              </select>
             </div>
 
             <div class="compact-form-group">
@@ -187,6 +240,8 @@
               <div id="draftModelCards" class="model-cards-grid"></div>
             </div>
 
+            <div class="settings-divider"></div>
+
             <div class="compact-form-group">
               <label class="form-label small text-muted">Personality</label>
               <textarea name="agent_personality" class="form-control form-control-sm" rows="2" placeholder="How should the AI sound?">{{ agent_personality }}</textarea>
@@ -194,8 +249,8 @@
           </div>
 
           <!-- Translation -->
-          <div class="settings-section">
-            <h6 class="mb-3"><i class="bi bi-translate"></i> Translation</h6>
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-translate"></i> Translation</div>
             <div class="feature-grid">
               <div class="feature-card">
                 <label class="form-label small text-muted">Provider</label>
@@ -225,57 +280,46 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Captcha Tab -->
-      <div class="tab-pane fade" id="captcha-panel" role="tabpanel">
-        <div class="settings-card">
-          <div class="settings-section">
-            <h6 class="mb-3"><i class="bi bi-shield-check"></i> Captcha Solver AI</h6>
-            
+        <!-- ═══════ Captcha Panel ═══════ -->
+        <div class="tab-pane fade" id="captcha-panel" role="tabpanel">
+          <div class="settings-panel-header">
+            <h2>Captcha Solver</h2>
+            <p>Configure the AI used to solve captcha challenges.</p>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-robot"></i> Captcha AI</div>
+
             <div class="compact-form-group">
               <label class="form-label small text-muted">Provider</label>
-              <div class="provider-pills" id="captchaProviderSelector">
-                <label class="provider-pill {% if captcha_ai_provider == 'openai' or not captcha_ai_provider %}active{% endif %}">
+              <div class="provider-cards" id="captchaProviderSelector">
+                <label class="provider-card {% if captcha_ai_provider == 'openai' or not captcha_ai_provider %}active{% endif %}">
                   <input type="radio" name="captcha_ai_provider" value="openai" {% if captcha_ai_provider == 'openai' or not captcha_ai_provider %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                  <img src="https://models.dev/logos/openai.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/openai.svg" alt="">
                   <span>OpenAI</span>
                 </label>
-                <label class="provider-pill {% if captcha_ai_provider == 'openrouter' %}active{% endif %}">
+                <label class="provider-card {% if captcha_ai_provider == 'openrouter' %}active{% endif %}">
                   <input type="radio" name="captcha_ai_provider" value="openrouter" {% if captcha_ai_provider == 'openrouter' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                  <img src="https://models.dev/logos/openrouter.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/openrouter.svg" alt="">
                   <span>OpenRouter</span>
                 </label>
-                <label class="provider-pill {% if captcha_ai_provider == 'google' %}active{% endif %}">
+                <label class="provider-card {% if captcha_ai_provider == 'google' %}active{% endif %}">
                   <input type="radio" name="captcha_ai_provider" value="google" {% if captcha_ai_provider == 'google' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                  <img src="https://models.dev/logos/google.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/google.svg" alt="">
                   <span>Google</span>
                 </label>
-                <label class="provider-pill {% if captcha_ai_provider == 'poe' %}active{% endif %}">
+                <label class="provider-card {% if captcha_ai_provider == 'poe' %}active{% endif %}">
                   <input type="radio" name="captcha_ai_provider" value="poe" {% if captcha_ai_provider == 'poe' %}checked{% endif %} onchange="handleCaptchaProviderChange()">
-                  <img src="https://models.dev/logos/poe.svg" alt="" width="16" height="16">
+                  <img src="https://models.dev/logos/poe.svg" alt="">
                   <span>Poe</span>
                 </label>
               </div>
             </div>
 
-            <div id="captchaOpenaiKeySection" class="compact-form-group {% if captcha_ai_provider != 'openai' and captcha_ai_provider %}d-none{% endif %}">
-              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-              <input type="password" name="captcha_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_openai_api_key }}" placeholder="Uses shared key if empty">
-            </div>
-            <div id="captchaOpenrouterKeySection" class="compact-form-group {% if captcha_ai_provider != 'openrouter' %}d-none{% endif %}">
-              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-              <input type="password" name="captcha_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_openrouter_api_key }}" placeholder="Uses shared key if empty">
-            </div>
-            <div id="captchaGoogleKeySection" class="compact-form-group {% if captcha_ai_provider != 'google' %}d-none{% endif %}">
-              <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-              <input type="password" name="captcha_google_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_google_api_key }}" placeholder="Uses shared key if empty">
-            </div>
-            <div id="captchaPoeKeySection" class="{% if captcha_ai_provider != 'poe' %}d-none{% endif %}">
-              <div class="compact-form-group">
-                <label class="form-label small text-muted">API Key <span class="text-muted">(optional)</span></label>
-                <input type="password" name="captcha_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_poe_api_key }}" placeholder="Uses shared key if empty">
-              </div>
+            <div class="settings-divider"></div>
+
+            <div id="captchaPoeReasoningSection" class="{% if captcha_ai_provider != 'poe' %}d-none{% endif %}">
               <div class="compact-form-group">
                 <label class="form-label small text-muted">Reasoning</label>
                 <select name="captcha_poe_reasoning_effort" class="form-select form-select-sm" style="max-width: 150px;">
@@ -307,8 +351,11 @@
               </div>
               <div id="captchaModelCards" class="model-cards-grid"></div>
             </div>
+          </div>
 
-            <div class="toggle-group mt-4">
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-toggles"></i> Behavior</div>
+            <div class="toggle-group">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" name="auto_solve_captcha" id="auto_solve_captcha" {% if auto_solve_captcha %}checked{% endif %}>
                 <label class="form-check-label small" for="auto_solve_captcha">Auto-solve challenges</label>
@@ -320,13 +367,96 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- General Tab -->
-      <div class="tab-pane fade" id="general-panel" role="tabpanel">
-        <div class="settings-card">
-          <div class="settings-section">
-            <h6 class="mb-3"><i class="bi bi-gear"></i> Preferences</h6>
+        <!-- ═══════ API Keys Panel ═══════ -->
+        <div class="tab-pane fade" id="keys-panel" role="tabpanel">
+          <div class="settings-panel-header">
+            <h2>API Keys</h2>
+            <p>Manage shared and provider-specific API keys.</p>
+          </div>
+
+          <!-- Shared Keys -->
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-key"></i> Shared Keys</div>
+            <p class="text-muted small mb-3">These keys are used as fallbacks when purpose-specific keys aren't set.</p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small text-muted">OpenAI</label>
+                <input type="password" name="shared_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_openai_api_key }}" placeholder="sk-...">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">OpenRouter</label>
+                <input type="password" name="shared_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_openrouter_api_key }}" placeholder="sk-or-...">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Google AI</label>
+                <input type="password" name="shared_google_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_google_api_key }}" placeholder="AIza...">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Poe</label>
+                <input type="password" name="shared_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ shared_poe_api_key }}" placeholder="poe-...">
+              </div>
+            </div>
+          </div>
+
+          <!-- Drafting AI Keys -->
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-pen"></i> Drafting AI Keys</div>
+            <p class="text-muted small mb-3">Override shared keys for the drafting AI specifically.</p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small text-muted">OpenAI</label>
+                <input type="password" name="draft_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_openai_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">OpenRouter</label>
+                <input type="password" name="draft_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_openrouter_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Google AI</label>
+                <input type="password" name="draft_google_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_google_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Poe</label>
+                <input type="password" name="draft_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ draft_poe_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+            </div>
+          </div>
+
+          <!-- Captcha AI Keys -->
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-shield-check"></i> Captcha AI Keys</div>
+            <p class="text-muted small mb-3">Override shared keys for the captcha solver specifically.</p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small text-muted">OpenAI</label>
+                <input type="password" name="captcha_openai_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_openai_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">OpenRouter</label>
+                <input type="password" name="captcha_openrouter_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_openrouter_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Google AI</label>
+                <input type="password" name="captcha_google_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_google_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Poe</label>
+                <input type="password" name="captcha_poe_api_key" class="form-control form-control-sm api-key-input" value="{{ captcha_poe_api_key }}" placeholder="Uses shared key if empty">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ General Panel (merged with Account) ═══════ -->
+        <div class="tab-pane fade" id="general-panel" role="tabpanel">
+          <div class="settings-panel-header">
+            <h2>General</h2>
+            <p>Preferences, editor settings, and account management.</p>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-sliders"></i> Preferences</div>
             <div class="toggle-group">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" name="use_easymde" id="use_easymde" {% if use_easymde %}checked{% endif %}>
@@ -337,54 +467,42 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Account Tab -->
-      <div class="tab-pane fade" id="account-panel" role="tabpanel">
-        <div class="settings-card">
-          <div class="settings-section">
-            <h6 class="mb-3"><i class="bi bi-person-lock"></i> Privacy</h6>
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="bi bi-person-lock"></i> Account &amp; Privacy</div>
             <p class="text-muted small mb-3">Your Moltbook API Key is stored in your browser's local storage.</p>
             <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearLocalStorage()">
               <i class="bi bi-box-arrow-right"></i> Log out and clear data
             </button>
           </div>
         </div>
+
       </div>
-    </div>
-  </form>
+    </form>
+  </main>
+</div>
+
+<div class="unsaved-changes-bar" id="unsavedChangesBar">
+  <div class="bar-content">
+    <span class="unsaved-text">You have unsaved changes</span>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="resetForm()">Reset</button>
+    <button type="submit" form="settingsForm" class="btn btn-success btn-sm" id="saveChangesBtn">Save Changes</button>
+  </div>
 </div>
 
 <script>
 let currentVerificationCode = null;
 let currentTaskId = null;
 
-/* ── Provider logo map ── */
-const PROVIDER_LOGOS = {
-    openai: 'https://models.dev/logos/openai.svg',
-    openrouter: 'https://models.dev/logos/openrouter.svg',
-    google: 'https://models.dev/logos/google.svg',
-    poe: 'https://models.dev/logos/poe.svg',
-    anthropic: 'https://models.dev/logos/anthropic.svg',
-    meta: 'https://models.dev/logos/meta.svg',
-    mistral: 'https://models.dev/logos/mistralai.svg',
-};
-
 /* ── Provider change handlers ── */
 function handleDraftProviderChange() {
     const provider = document.querySelector('input[name="draft_ai_provider"]:checked').value;
 
-    document.querySelectorAll('#draftProviderSelector .provider-pill').forEach(el => {
+    document.querySelectorAll('#draftProviderSelector .provider-card').forEach(el => {
         el.classList.toggle('active', el.querySelector('input').value === provider);
     });
 
-    ['draftOpenaiKeySection','draftOpenrouterKeySection','draftGoogleKeySection','draftPoeKeySection'].forEach(id => {
-        document.getElementById(id).classList.add('d-none');
-    });
-
-    const keyMap = {openai:'draftOpenaiKeySection', openrouter:'draftOpenrouterKeySection', google:'draftGoogleKeySection', poe:'draftPoeKeySection'};
-    if (keyMap[provider]) document.getElementById(keyMap[provider]).classList.remove('d-none');
+    document.getElementById('draftPoeReasoningSection').classList.toggle('d-none', provider !== 'poe');
 
     refreshDraftModels();
 }
@@ -392,16 +510,11 @@ function handleDraftProviderChange() {
 function handleCaptchaProviderChange() {
     const provider = document.querySelector('input[name="captcha_ai_provider"]:checked').value;
 
-    document.querySelectorAll('#captchaProviderSelector .provider-pill').forEach(el => {
+    document.querySelectorAll('#captchaProviderSelector .provider-card').forEach(el => {
         el.classList.toggle('active', el.querySelector('input').value === provider);
     });
 
-    ['captchaOpenaiKeySection','captchaOpenrouterKeySection','captchaGoogleKeySection','captchaPoeKeySection'].forEach(id => {
-        document.getElementById(id).classList.add('d-none');
-    });
-
-    const keyMap = {openai:'captchaOpenaiKeySection', openrouter:'captchaOpenrouterKeySection', google:'captchaGoogleKeySection', poe:'captchaPoeKeySection'};
-    if (keyMap[provider]) document.getElementById(keyMap[provider]).classList.remove('d-none');
+    document.getElementById('captchaPoeReasoningSection').classList.toggle('d-none', provider !== 'poe');
 
     refreshCaptchaModels();
 }
@@ -546,10 +659,75 @@ function clearLocalStorage() {
     }
 }
 
+/* ── Unsaved Changes Tracking ── */
+let originalFormData = null;
+const unsavedChangesBar = document.getElementById('unsavedChangesBar');
+const settingsForm = document.getElementById('settingsForm');
+
+function captureFormData() {
+    const formData = new FormData(settingsForm);
+    const data = {};
+    for (let [key, value] of formData) {
+        data[key] = value;
+    }
+    // Also capture checkbox states (unchecked checkboxes aren't in FormData)
+    settingsForm.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        data[checkbox.name] = checkbox.checked;
+    });
+    return JSON.stringify(data);
+}
+
+function hasUnsavedChanges() {
+    if (!originalFormData) return false;
+    return captureFormData() !== originalFormData;
+}
+
+function updateUnsavedChangesBar() {
+    if (hasUnsavedChanges()) {
+        unsavedChangesBar.classList.add('visible');
+    } else {
+        unsavedChangesBar.classList.remove('visible');
+    }
+}
+
+function resetForm() {
+    if (confirm('Discard all unsaved changes?')) {
+        settingsForm.reset();
+        // Restore checkbox states from original data
+        const originalData = JSON.parse(originalFormData);
+        settingsForm.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            if (checkbox.name in originalData) {
+                checkbox.checked = originalData[checkbox.name];
+            }
+        });
+        // Refresh provider states
+        handleDraftProviderChange();
+        handleCaptchaProviderChange();
+        handleTranslationProviderChange();
+        // Reset model cards selection
+        refreshDraftModels();
+        refreshCaptchaModels();
+        unsavedChangesBar.classList.remove('visible');
+    }
+}
+
+function initUnsavedTracking() {
+    originalFormData = captureFormData();
+    
+    // Track all input changes
+    settingsForm.addEventListener('input', updateUnsavedChangesBar);
+    settingsForm.addEventListener('change', updateUnsavedChangesBar);
+    
+    // Handle form submission
+    // We don't need to manually clear it on submit since the page reloads,
+    // but if it were AJAX we would update originalFormData here.
+}
+
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', function() {
     refreshDraftModels();
     refreshCaptchaModels();
+    initUnsavedTracking();
 });
 </script>
 {% endblock %}

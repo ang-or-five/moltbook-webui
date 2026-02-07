@@ -319,17 +319,42 @@ def profile():
 def settings():
     if 'api_key' not in session: return redirect(url_for('login'))
     
+    # Define all setting keys for easy management
+    setting_keys = [
+        'draft_ai_provider', 'draft_model', 'draft_poe_reasoning_effort',
+        'captcha_ai_provider', 'captcha_model', 'captcha_poe_reasoning_effort',
+        'translation_provider', 'translation_model',
+        'agent_personality', 'shared_openai_api_key', 'shared_openrouter_api_key',
+        'shared_google_api_key', 'shared_poe_api_key',
+        'draft_openai_api_key', 'draft_openrouter_api_key', 'draft_google_api_key', 'draft_poe_api_key',
+        'captcha_openai_api_key', 'captcha_openrouter_api_key', 'captcha_google_api_key', 'captcha_poe_api_key'
+    ]
+    
+    checkbox_keys = ['auto_solve_captcha', 'captcha_preprocessing', 'use_easymde']
+
     if request.method == 'POST':
-        session['openai_api_key'] = request.form.get('openai_api_key')
-        session['agent_personality'] = request.form.get('agent_personality')
-        session['use_easymde'] = 'use_easymde' in request.form
-        flash("Settings updated.", "success")
+        for key in setting_keys:
+            if key in request.form:
+                session[key] = request.form.get(key)
+        
+        for key in checkbox_keys:
+            session[key] = key in request.form
+            
+        flash("Settings updated successfully.", "success")
         return redirect(url_for('settings'))
         
-    return render_template('settings.html', 
-                           openai_api_key=session.get('openai_api_key', ''),
-                           agent_personality=session.get('agent_personality', DEFAULT_PERSONALITY),
-                           use_easymde=session.get('use_easymde', True))
+    # Build context with current session values or defaults
+    ctx = {key: session.get(key, '') for key in setting_keys}
+    for key in checkbox_keys:
+        ctx[key] = session.get(key, True if key != 'auto_solve_captcha' else False)
+    
+    # Overrides/Defaults
+    if not ctx['agent_personality']: ctx['agent_personality'] = DEFAULT_PERSONALITY
+    if not ctx['draft_ai_provider']: ctx['draft_ai_provider'] = 'openai'
+    if not ctx['captcha_ai_provider']: ctx['captcha_ai_provider'] = 'openai'
+    if not ctx['translation_provider']: ctx['translation_provider'] = 'google'
+        
+    return render_template('settings.html', **ctx)
 
 @app.route('/ai/draft', methods=['POST'])
 def ai_draft():
