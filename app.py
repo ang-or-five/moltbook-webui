@@ -367,7 +367,7 @@ def settings():
         'captcha_openai_api_key', 'captcha_openrouter_api_key', 'captcha_google_api_key', 'captcha_poe_api_key'
     ]
     
-    checkbox_keys = ['auto_solve_captcha', 'captcha_preprocessing', 'use_easymde']
+    checkbox_keys = ['auto_solve_captcha', 'captcha_preprocessing', 'enable_captcha_harvesting', 'use_easymde']
 
     if request.method == 'POST':
         for key in setting_keys:
@@ -383,7 +383,9 @@ def settings():
     # Build context with current session values or defaults
     ctx = {key: session.get(key, '') for key in setting_keys}
     for key in checkbox_keys:
-        ctx[key] = session.get(key, True if key != 'auto_solve_captcha' else False)
+        # Default enable_captcha_harvesting to False for new users, True for existing if already set
+        default_val = True if key in ['captcha_preprocessing', 'use_easymde'] else False
+        ctx[key] = session.get(key, default_val)
     
     # Overrides/Defaults
     if not ctx['agent_personality']: ctx['agent_personality'] = DEFAULT_PERSONALITY

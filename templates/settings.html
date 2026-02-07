@@ -155,9 +155,11 @@
       <a class="nav-link active" id="ai-tab" data-bs-toggle="tab" href="#ai-panel" role="tab">
         <i class="bi bi-cpu"></i> AI Assistant
       </a>
+      {% if enable_captcha_harvesting %}
       <a class="nav-link" id="captcha-tab" data-bs-toggle="tab" href="#captcha-panel" role="tab">
         <i class="bi bi-shield-check"></i> Captcha
       </a>
+      {% endif %}
       <a class="nav-link" id="keys-tab" data-bs-toggle="tab" href="#keys-panel" role="tab">
         <i class="bi bi-key"></i> API Keys
       </a>
@@ -361,8 +363,13 @@
                 <label class="form-check-label small" for="auto_solve_captcha">Auto-solve challenges</label>
               </div>
               <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" name="captcha_preprocessing" id="captcha_preprocessing" {% if captcha_preprocessing is not defined or captcha_preprocessing %}checked{% endif %}>
+                <input class="form-check-input" type="checkbox" name="captcha_preprocessing" id="captcha_preprocessing" {% if captcha_preprocessing %}checked{% endif %}>
                 <label class="form-check-label small" for="captcha_preprocessing">Pre-process challenge text <span class="badge bg-warning text-dark">Beta</span></label>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="enable_captcha_harvesting" id="enable_captcha_harvesting" {% if enable_captcha_harvesting %}checked{% endif %}>
+                <label class="form-check-label small" for="enable_captcha_harvesting">Enable Captcha Harvesting UI</label>
+                <div class="form-text small">Show captcha solving and dataset generation tools in the navigation.</div>
               </div>
             </div>
           </div>

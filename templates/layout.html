@@ -24,7 +24,9 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('create_post') }}">Create Post</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('search') }}">Search</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('mass_drafts') }}">Draft-gen</a></li>
+        {% if session.get('enable_captcha_harvesting') %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('captcha_demo') }}">Captcha</a></li>
+        {% endif %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('info') }}">About</a></li>
       </ul>
       <ul class="navbar-nav">
