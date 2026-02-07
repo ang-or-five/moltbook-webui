@@ -41,7 +41,7 @@
                 </div>
                 <div id="search-content-{{ loop.index }}" class="mb-3 text-secondary markdown-body">{{ res.content[:300]|markdown|safe }}{% if res.content|length > 300 %}...{% endif %}</div>
                 <div class="mb-3">
-                    <a href="#" class="text-decoration-none small text-muted" onclick="translateText('search-content-{{ loop.index }}', `{{ res.content[:300] | replace('`', '\\`') }}`); return false;">
+                    <a href="#" class="text-decoration-none small text-muted" onclick='translateText("search-content-{{ loop.index }}", {{ (res.content[:300] if res.content else "") | tojson }}); return false;'>
                         <i class="bi bi-translate"></i> Translate
                     </a>
                 </div>
