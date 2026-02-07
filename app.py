@@ -549,22 +549,36 @@ def api_models(provider):
         # Fetch from models.dev for OpenAI
         if provider == 'openai':
             try:
-                resp = http_session.get('https://api.models.dev/v1/models', timeout=10)
+                resp = http_session.get('https://models.dev/api.json', timeout=10)
                 if resp.status_code == 200:
                     data = resp.json()
                     models = []
-                    for model in data.get('models', []):
-                        if model.get('provider', '').lower() == 'openai':
+                    # Find OpenAI provider in the schema
+                    openai_provider = data.get('openai') or data.get('OpenAI')
+                    if not openai_provider:
+                        # Try case-insensitive match
+                        for key, prov in data.items():
+                            if key.lower() == 'openai':
+                                openai_provider = prov
+                                break
+                    
+                    if openai_provider and 'models' in openai_provider:
+                        provider_models = openai_provider['models']
+                        for model_id, model in provider_models.items():
+                            # Check if vision is supported from modalities
+                            has_vision = 'image' in model.get('modalities', {}).get('input', [])
                             models.append({
-                                "id": model.get('id'),
-                                "name": model.get('name', model.get('id')),
-                                "context_length": model.get('context_length', 0),
+                                "id": model.get('id', model_id),
+                                "name": model.get('name', model_id),
+                                "context_length": model.get('limit', {}).get('context', 0),
                                 "reasoning": model.get('reasoning', False),
-                                "vision": model.get('vision', False),
-                                "tool_call": model.get('tool_call', False)
+                                "vision": has_vision,
+                                "tool_call": model.get('tool_call', False),
+                                "cost": model.get('cost', {})
                             })
-                    return jsonify({"models": models})
-            except:
+                        return jsonify({"models": models})
+            except Exception as e:
+                print(f"models.dev API error: {e}")
                 pass
             # Fallback to hardcoded
             return jsonify({"models": [
