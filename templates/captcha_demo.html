@@ -4,6 +4,35 @@
     <div class="col-md-10">
         <h1 class="h3 mb-4">Captcha Solver Demo</h1>
         
+        {% if session.get('enable_captcha_harvesting') %}
+        <!-- Harvesting Tools -->
+        <div class="card shadow-sm border-0 mb-4 bg-light border-start border-4 border-success">
+            <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-seedling"></i> Harvesting Tools</span>
+                <span class="badge bg-success">Enabled</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100" onclick="batchHarvest()">
+                            <i class="fas fa-layer-group"></i> Batch Harvest
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-success w-100" onclick="viewDataset()">
+                            <i class="fas fa-database"></i> View Dataset
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-secondary w-100" onclick="generateMassDrafts()">
+                            <i class="fas fa-file-alt"></i> Mass Drafts
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-white fw-bold">
                 <i class="fas fa-robot"></i> AI-Powered Verification Solver
