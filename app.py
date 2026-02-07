@@ -285,13 +285,12 @@ def create_post():
         title = request.form.get('title')
         content = request.form.get('content')
         submolt = request.form.get('submolt', 'general')
-        url_link = request.form.get('url')
         
-        payload = {"submolt": submolt, "title": title}
-        if url_link:
-            payload['url'] = url_link
-        else:
-            payload['content'] = content
+        payload = {
+            "submolt": submolt,
+            "title": title,
+            "content": content
+        }
             
         resp = http_session.post(f"{API_BASE}/posts", json=payload, headers=get_auth_headers())
         
