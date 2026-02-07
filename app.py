@@ -511,34 +511,81 @@ def captcha_dataset():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/models/<provider>', methods=['GET'])
+@cache.cached(timeout=300)
 def api_models(provider):
     """Fetch available models for a provider."""
     if 'api_key' not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
     try:
-        # Return hardcoded models for now
-        # In production, this could fetch from provider APIs
+        # Fetch OpenRouter models from their API
+        if provider == 'openrouter':
+            try:
+                resp = http_session.get('https://openrouter.ai/api/v1/models', timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    models = []
+                    for model in data.get('data', []):
+                        models.append({
+                            "id": model.get('id'),
+                            "name": model.get('name', model.get('id')),
+                            "context_length": model.get('context_length', 0),
+                            "description": model.get('description', '')[:100],
+                            "pricing": {
+                                "prompt": model.get('pricing', {}).get('prompt', 0),
+                                "completion": model.get('pricing', {}).get('completion', 0)
+                            }
+                        })
+                    return jsonify({"models": models})
+                else:
+                    # Fallback to hardcoded if API fails
+                    return jsonify({"models": [
+                        {"id": "openai/gpt-4.1-nano", "name": "GPT-4.1 Nano (OR)", "context_length": 128000},
+                        {"id": "openai/gpt-4.1-mini", "name": "GPT-4.1 Mini (OR)", "context_length": 128000},
+                    ]})
+            except Exception as e:
+                return jsonify({"error": f"OpenRouter API error: {str(e)}"}), 500
+        
+        # Fetch from models.dev for OpenAI
+        if provider == 'openai':
+            try:
+                resp = http_session.get('https://api.models.dev/v1/models', timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    models = []
+                    for model in data.get('models', []):
+                        if model.get('provider', '').lower() == 'openai':
+                            models.append({
+                                "id": model.get('id'),
+                                "name": model.get('name', model.get('id')),
+                                "context_length": model.get('context_length', 0),
+                                "reasoning": model.get('reasoning', False),
+                                "vision": model.get('vision', False),
+                                "tool_call": model.get('tool_call', False)
+                            })
+                    return jsonify({"models": models})
+            except:
+                pass
+            # Fallback to hardcoded
+            return jsonify({"models": [
+                {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gpt-4o", "name": "GPT-4o", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+            ]})
+        
+        # Default hardcoded models for other providers
         models_map = {
-            'openai': [
-                {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano", "context_length": 128000},
-                {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini", "context_length": 128000},
-                {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "context_length": 128000},
-                {"id": "gpt-4o", "name": "GPT-4o", "context_length": 128000},
-            ],
-            'openrouter': [
-                {"id": "openai/gpt-4.1-nano", "name": "GPT-4.1 Nano (OR)", "context_length": 128000},
-                {"id": "openai/gpt-4.1-mini", "name": "GPT-4.1 Mini (OR)", "context_length": 128000},
-            ],
             'google': [
-                {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "context_length": 1000000},
-                {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro", "context_length": 2000000},
+                {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "context_length": 1000000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro", "context_length": 2000000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash", "context_length": 1000000, "reasoning": False, "vision": True, "tool_call": True},
             ],
             'poe': [
-                {"id": "gpt-5-nano", "name": "GPT-5 Nano (Poe)", "context_length": 128000},
-                {"id": "gpt-5-mini", "name": "GPT-5 Mini (Poe)", "context_length": 128000},
-                {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano (Poe)", "context_length": 128000},
-                {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini (Poe)", "context_length": 128000},
+                {"id": "gpt-5-nano", "name": "GPT-5 Nano (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gpt-5-mini", "name": "GPT-5 Mini (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
+                {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini (Poe)", "context_length": 128000, "reasoning": False, "vision": True, "tool_call": True},
             ]
         }
         
