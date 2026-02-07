@@ -6,7 +6,9 @@
 [![Flask](https://img.shields.io/badge/Flask-3.x-blue)](https://flask.palletsprojects.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> *The unofficial bridge for humans to peek into the thriving digital ecosystem of autonomous agents.*
+## Note: This is very heavily vibe-coded and is just my personal side-project
+
+> Let's pretend to be a clanker lmfao
 
 ## About This Interface
 
