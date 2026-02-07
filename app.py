@@ -74,11 +74,45 @@ def is_safe_url(url):
 
 app.jinja_env.tests['safe_url'] = is_safe_url
 
-def get_ai_client():
-    api_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+def get_ai_client(provider='openai'):
+    # Determine the correct API key based on provider and purpose (drafting/captcha/shared)
+    # For simplicity in this helper, we'll try purpose-specific then shared
+    
+    key_map = {
+        'openai': ['draft_openai_api_key', 'shared_openai_api_key'],
+        'openrouter': ['draft_openrouter_api_key', 'shared_openrouter_api_key'],
+        'google': ['draft_google_api_key', 'shared_google_api_key'],
+        'poe': ['draft_poe_api_key', 'shared_poe_api_key']
+    }
+    
+    api_key = None
+    for session_key in key_map.get(provider, []):
+        api_key = session.get(session_key)
+        if api_key: break
+        
+    if not api_key:
+        # Final fallback to environment variables
+        env_map = {
+            'openai': 'OPENAI_API_KEY',
+            'openrouter': 'OPENROUTER_API_KEY',
+            'google': 'GOOGLE_API_KEY',
+            'poe': 'POE_API_KEY'
+        }
+        api_key = os.getenv(env_map.get(provider, ''))
+
     if not api_key:
         return None
-    return OpenAI(api_key=api_key)
+        
+    if provider == 'openai':
+        return OpenAI(api_key=api_key)
+    elif provider == 'openrouter':
+        return OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+    elif provider == 'google':
+        return OpenAI(api_key=api_key, base_url="https://models.dev/api/google")
+    elif provider == 'poe':
+        return OpenAI(api_key=api_key, base_url="https://models.dev/api/poe")
+        
+    return None
 
 # --- Routes ---
 
@@ -360,18 +394,26 @@ def settings():
 def ai_draft():
     if 'api_key' not in session: return jsonify({"error": "Unauthorized"}), 401
     
-    client = get_ai_client()
+    provider = session.get('draft_ai_provider', 'openai')
+    client = get_ai_client(provider)
     if not client:
-        return jsonify({"error": "AI client not configured. Set OpenAI API key in Settings."}), 400
+        return jsonify({"error": f"AI client for {provider} not configured. Check your API keys in Settings."}), 400
     
     data = request.json
     context = data.get('context', '')
     prompt = data.get('prompt', 'Write a short, engaging post about AI agents.')
     personality = session.get('agent_personality', DEFAULT_PERSONALITY)
     
+    model = session.get('draft_model', 'gpt-4o-mini')
+    provider = session.get('draft_ai_provider', 'openai')
+    
+    # Strip provider prefix for Poe
+    if provider == 'poe' and '/' in model:
+        model = model.split('/')[-1]
+    
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini", # Default to a cheap but good model
+            model=model,
             messages=[
                 {"role": "system", "content": f"You are an AI agent on Moltbook. Personality: {personality}"},
                 {"role": "user", "content": f"Context: {context}\n\nTask: {prompt}"}

@@ -93,6 +93,14 @@ Write a compressed reasoning process first, in <compressed> tags, then write the
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1"
         )
+    elif provider == "poe":
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://models.dev/api/poe"
+        )
+        # Strip provider prefix for Poe if present
+        if '/' in model:
+            model = model.split('/')[-1]
     else:
         raise ValueError(f"Unsupported provider: {provider}")
     
