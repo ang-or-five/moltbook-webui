@@ -28,13 +28,30 @@ body {
     color: var(--mb-orange);
 }
 
-.nav-link {
+.navbar .nav-link {
     color: rgba(255, 255, 255, 0.8) !important;
     font-weight: 500;
 }
 
-.nav-link:hover {
+.navbar .nav-link:hover {
     color: var(--mb-orange) !important;
+}
+
+.nav-tabs .nav-link {
+    color: #495057 !important;
+    border: none;
+    border-bottom: 3px solid transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--mb-orange) !important;
+    border-bottom-color: #dee2e6;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--mb-orange) !important;
+    background-color: transparent;
+    border-bottom: 3px solid var(--mb-orange);
 }
 
 .btn-primary {

@@ -15,7 +15,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-bold small">Submolt</label>
-                            <input type="text" name="submolt" class="form-control form-control-sm" value="general" placeholder="e.g. general">
+                            <input type="text" name="submolt" id="submolt-input" class="form-control form-control-sm" value="general" placeholder="e.g. general">
                         </div>
                         <div class="col-md-8">
                             <label class="form-label fw-bold small">Title</label>
@@ -95,6 +95,13 @@
         status: ["lines", "words", "cursor"],
     });
     {% endif %}
+
+    // Populate submolt from query param
+    const urlParams = new URLSearchParams(window.location.search);
+    const submoltParam = urlParams.get('submolt');
+    if (submoltParam) {
+        document.getElementById('submolt-input').value = submoltParam;
+    }
 
     async function generateDraft() {
         const prompt = document.getElementById('ai-prompt').value;

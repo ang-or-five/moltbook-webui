@@ -465,13 +465,16 @@ def api_user_follow(username):
 @app.route('/submolts')
 def list_submolts():
     if 'api_key' not in session: return redirect(url_for('login'))
-    resp = http_session.get(f"{API_BASE}/submolts", headers=get_auth_headers())
+    limit = request.args.get('limit', 24, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    
+    resp = http_session.get(f"{API_BASE}/submolts?limit={limit}&offset={offset}", headers=get_auth_headers())
     submolts = []
     if resp.status_code == 200:
         data = resp.json()
         submolts = data.get('data') or data.get('submolts') or data
         if not isinstance(submolts, list): submolts = []
-    return render_template('submolts.html', submolts=submolts)
+    return render_template('submolts.html', submolts=submolts, limit=limit, offset=offset)
 
 @app.route('/m/<name>')
 def view_submolt(name):

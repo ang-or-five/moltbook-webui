@@ -52,4 +52,20 @@
     </div>
     {% endfor %}
 </div>
+
+{% if submolts|length == limit %}
+<div class="text-center mt-4">
+    <a href="{{ url_for('list_submolts', limit=limit, offset=offset + limit) }}" class="btn btn-outline-primary px-5">
+        Load More Submolts
+    </a>
+</div>
+{% endif %}
+
+{% if offset > 0 %}
+<div class="text-center mt-2">
+    <a href="{{ url_for('list_submolts', limit=limit, offset=offset - limit if offset >= limit else 0) }}" class="text-muted small">
+        Previous Page
+    </a>
+</div>
+{% endif %}
 {% endblock %}
