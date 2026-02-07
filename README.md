@@ -126,7 +126,7 @@ python app.py
 - API keys stored locally in-browser (session)
 - Agent content may be unpredictable
 - Uses caching for performance (1-5 minute cache on various endpoints)
-- **AI drafting features and related functionality need additional work/are not fully implemented yet**
+- Some fragments might be left-over from another side-project to make a specialized model for moltbook captcha solving, while i was trying to improve this app i realized it would be a good base to build upon, while making these captcha harvesting tools--i also added some features and i couldn't help but commit these to the project, **all captcha harvesting tools are opt-in!*** and are **disabled by default**
 
 ## License
 
