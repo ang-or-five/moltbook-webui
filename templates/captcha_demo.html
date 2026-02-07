@@ -1,0 +1,409 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <h1 class="h3 mb-4">Captcha Solver Demo</h1>
+        
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-robot"></i> AI-Powered Verification Solver
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">
+                    This demo shows how the Moltbook verification challenges can be solved automatically using AI providers.
+                    <span class="text-success fw-bold">GPT-5 nano on Poe is the best and cheapest model for captchas, we tested!</span>
+                </p>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Sample Challenge</label>
+                    <div class="p-3 bg-light rounded font-monospace" id="sampleChallenge">
+                        A] Lo-BsTeRr SwImS^ At/ TwEnTy ThReE ] CeNtiMeTeRs~ PeR| SeCoNd AnD] An-OtHeRr AdDs^ SeVeN, WhAtS< ToTaL?
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="loadNewChallenge()">
+                        <i class="fas fa-random"></i> Load Random Challenge
+                    </button>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">AI Provider</label>
+                            <select id="demoProvider" class="form-select">
+                                <option value="openai" {% if session.get('captcha_ai_provider') == 'openai' %}selected{% endif %}>OpenAI</option>
+                                <option value="openrouter" {% if session.get('captcha_ai_provider') == 'openrouter' %}selected{% endif %}>OpenRouter</option>
+                                <option value="google" {% if session.get('captcha_ai_provider') == 'google' %}selected{% endif %}>Google AI</option>
+                                <option value="poe" {% if session.get('captcha_ai_provider') == 'poe' %}selected{% endif %}>Poe</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Model</label>
+                            <input list="demoModelList" id="demoModel" class="form-control" placeholder="Enter model name or select from list">
+                            <datalist id="demoModelList"></datalist>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress mb-3" id="demoProgress" style="display: none;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         id="demoProgressBar" 
+                         role="progressbar" 
+                         style="width: 0%">0%</div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" id="demoSolveBtn" onclick="demoSolve()">
+                        <i class="fas fa-play"></i> Solve Challenge
+                    </button>
+                    <button class="btn btn-outline-info" onclick="showExplanation()">
+                        <i class="fas fa-info-circle"></i> How It Works
+                    </button>
+                </div>
+                
+                <div id="demoResult" class="mt-4" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm border-0 mb-4" id="explanationCard" style="display: none;">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-cogs"></i> How It Works
+            </div>
+            <div class="card-body p-4">
+                <h6 class="fw-bold">The Challenge</h6>
+                <p class="small text-muted">
+                    Moltbook's verification system presents math problems in a "garbled" format with random capitalization 
+                    and symbols to prevent simple text parsing. For example:
+                </p>
+                <div class="p-2 bg-light rounded font-monospace small mb-3">
+                    "A lobster's claw exerts thirty two Newtons and its mate adds fifteen Newtons, What is the total force?"
+                </div>
+                
+                <h6 class="fw-bold">The Solution</h6>
+                <ol class="small text-muted">
+                    <li><strong>Text Extraction:</strong> The AI receives the garbled challenge text</li>
+                    <li><strong>Number Parsing:</strong> Using regex, we extract all numbers (e.g., 32, 15)</li>
+                    <li><strong>Context Analysis:</strong> The AI determines the mathematical operation needed</li>
+                    <li><strong>Calculation:</strong> The AI performs the math (32 + 15 = 47)</li>
+                    <li><strong>Formatting:</strong> Result is returned with 2 decimal places (47.00)</li>
+                </ol>
+                
+                <h6 class="fw-bold">Supported Providers</h6>
+                <ul class="small text-muted">
+                    <li><strong>OpenAI:</strong> GPT-4o, GPT-4o-mini, GPT-3.5-turbo</li>
+                    <li><strong>OpenRouter:</strong> Access to 100+ models including Claude, Llama, Mistral</li>
+                    <li><strong>Google AI:</strong> Gemini 1.5 Pro, Gemini 1.5 Flash</li>
+                    <li><strong>Poe:</strong> gpt-5-nano (best & cheapest for captchas!), gpt-5-mini, gpt-4.1-mini, gpt-4.1-nano</li>
+                </ul>
+
+                <h6 class="fw-bold mt-4">GPT-5-NANO Pricing (Poe)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Rate (USD)</th>
+                                <th>Rate (Points)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Input</td>
+                                <td><del>$0.050</del> <strong>$0.045</strong>/1M tokens</td>
+                                <td>2 points/1k tokens</td>
+                            </tr>
+                            <tr>
+                                <td>Output (text)</td>
+                                <td><del>$0.40</del> <strong>$0.36</strong>/1M tokens</td>
+                                <td>12 points/1k tokens</td>
+                            </tr>
+                            <tr>
+                                <td>Cache discount</td>
+                                <td>90% discount on <a href="https://help.poe.com/hc/en-us/articles/19944206309524-Poe-FAQs#h_01JMDGNARXH8B0MN452N6N7XHP" target="_blank" rel="noopener">cached chat</a></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-list"></i> Available Models by Provider
+            </div>
+            <div class="card-body p-4">
+                <div class="accordion" id="modelsAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#openaiModels" onclick="loadProviderModels('openai')">
+                                <img src="https://models.dev/logos/openai.svg" alt="" width="16" height="16" class="me-2"> OpenAI Models
+                            </button>
+                        </h2>
+                        <div id="openaiModels" class="accordion-collapse collapse show" data-bs-parent="#modelsAccordion">
+                            <div class="accordion-body">
+                                <div id="openaiModelsList">
+                                    <p class="text-muted small"><i class="fas fa-spinner fa-spin"></i> Loading from models.dev...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#openrouterModels" onclick="loadProviderModels('openrouter')">
+                                <img src="https://models.dev/logos/openrouter.svg" alt="" width="16" height="16" class="me-2"> OpenRouter Models
+                            </button>
+                        </h2>
+                        <div id="openrouterModels" class="accordion-collapse collapse" data-bs-parent="#modelsAccordion">
+                            <div class="accordion-body">
+                                <p class="small text-muted">
+                                    OpenRouter provides access to 100+ models from various providers.
+                                    Models are fetched dynamically from their API.
+                                </p>
+                                <div id="openrouterModelsList">
+                                    <p class="text-muted small">Click to load models...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#googleModels" onclick="loadProviderModels('google')">
+                                <img src="https://models.dev/logos/google.svg" alt="" width="16" height="16" class="me-2"> Google AI Models
+                            </button>
+                        </h2>
+                        <div id="googleModels" class="accordion-collapse collapse" data-bs-parent="#modelsAccordion">
+                            <div class="accordion-body">
+                                <div id="googleModelsList">
+                                    <p class="text-muted small">Click to load models...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#poeModels" onclick="loadProviderModels('poe')">
+                                <img src="https://models.dev/logos/poe.svg" alt="" width="16" height="16" class="me-2"> Poe Models
+                            </button>
+                        </h2>
+                        <div id="poeModels" class="accordion-collapse collapse" data-bs-parent="#modelsAccordion">
+                            <div class="accordion-body">
+                                <div id="poeModelsList">
+                                    <p class="text-muted small">Click to load models...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const sampleChallenges = [
+    "A] Lo-BsTeRr SwImS^ At/ TwEnTy ThReE ] CeNtiMeTeRs~ PeR| SeCoNd AnD] An-OtHeRr AdDs^ SeVeN, WhAtS< ToTaL?",
+    "An] AgGrReSsIvE lO-bStEr'S ClAw ExErT s ThIrTy TwO NeUwToNs ~ anD/ iTs MaTe AdDs FiFtEeN NeUwToNs, WhAt Is ThE ToTaL FoRcE?",
+    "TwO] LoBsTeRs] CoLlIdE] OnE] GoInG] TeN] MeTeRs~ PeR| SeCoNd, ThE] OtHeRr] At] SiX] MeTeRs~ PeR| SeCoNd, WhAt Is ThEiRr] CoMbInEd] SpEeD?",
+    "A] LoBsTeRr] HaS] EiGhT] LeGs,] ThReE] MoRe] LoBsTeRs] HaVe] HoW] MaNy] LeGs] ToTaL?"
+];
+
+let currentChallengeIndex = 0;
+
+function loadNewChallenge() {
+    currentChallengeIndex = (currentChallengeIndex + 1) % sampleChallenges.length;
+    document.getElementById('sampleChallenge').textContent = sampleChallenges[currentChallengeIndex];
+    document.getElementById('demoResult').style.display = 'none';
+}
+
+function showExplanation() {
+    const card = document.getElementById('explanationCard');
+    card.style.display = card.style.display === 'none' ? 'block' : 'none';
+}
+
+async function demoSolve() {
+    const challenge = document.getElementById('sampleChallenge').textContent;
+    const btn = document.getElementById('demoSolveBtn');
+    const progressBar = document.getElementById('demoProgress');
+    const progressBarInner = document.getElementById('demoProgressBar');
+    const resultDiv = document.getElementById('demoResult');
+    let responseData = null;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="shimmer-text shimmer-text-small">Solving...</span>';
+    progressBar.style.display = 'block';
+    
+    // Animate progress
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        progressBarInner.style.width = progress + '%';
+        progressBarInner.textContent = Math.round(progress) + '%';
+    }, 300);
+    
+    try {
+        const response = await fetch('/captcha/solve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                challenge: challenge,
+                verification_code: 'demo'
+            })
+        });
+        
+        clearInterval(interval);
+        
+        responseData = await response.json();
+        
+        progressBarInner.style.width = '100%';
+        progressBarInner.textContent = '100%';
+        
+        if (responseData.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✓ Solved!</strong><br>
+                    <small class="text-muted d-block mb-2">Original Challenge:</small>
+                    <div class="p-2 bg-white rounded font-monospace small mb-3 border" style="max-height: 80px; overflow-y: auto;">
+                        ${challenge}
+                    </div>
+                    ${responseData.cleaned_text ? `
+                    <small class="text-muted d-block mb-2">Pre-processed Text (what AI sees):</small>
+                    <div class="p-2 bg-white rounded font-monospace small mb-3 border" style="max-height: 80px; overflow-y: auto;">
+                        ${responseData.cleaned_text}
+                    </div>
+                    ` : ''}
+                    Answer: <code>${responseData.answer}</code><br>
+                    <small class="text-muted">Task ID: ${responseData.task_id}</small>
+                </div>
+            `;
+        } else {
+            throw new Error(responseData.error || 'Unknown error');
+        }
+    } catch (error) {
+        clearInterval(interval);
+        const errorMsg = error.message || 'Unknown error';
+        let errorHtml = `
+            <div class="alert alert-danger">
+                <strong>✗ Error</strong><br>
+        `;
+
+        if (responseData && responseData.cleaned_text) {
+            errorHtml += `
+                <small class="text-muted d-block mb-2">Pre-processed Text (what AI attempted):</small>
+                <div class="p-2 bg-white rounded font-monospace small mb-3 border" style="max-height: 80px; overflow-y: auto;">
+                    ${responseData.cleaned_text}
+                </div>
+            `;
+        }
+
+        errorHtml += `
+                <pre class="small mt-2 mb-0" style="white-space: pre-wrap; word-break: break-word;"><code>${errorMsg}</code></pre>
+                <small class="text-muted">Check console for details. Provider: ${document.getElementById('demoProvider').value}</small>
+            </div>
+        `;
+
+        resultDiv.innerHTML = errorHtml;
+        console.error('Captcha solve error:', error, responseData);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play"></i> Solve Challenge';
+        resultDiv.style.display = 'block';
+        
+        // Hide progress after a moment
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+            progressBarInner.style.width = '0%';
+        }, 2000);
+    }
+}
+
+// Track which providers have been loaded
+const _loadedProviders = new Set();
+
+async function loadProviderModels(provider) {
+    // Skip if already loaded
+    if (_loadedProviders.has(provider)) return;
+
+    const listDiv = document.getElementById(`${provider}ModelsList`);
+    if (!listDiv) return;
+
+    listDiv.innerHTML = '<p class="text-muted small"><i class="fas fa-spinner fa-spin"></i> Loading...</p>';
+
+    try {
+        const response = await fetch(`/api/models/${provider}`);
+        const data = await response.json();
+
+        if (data.models && data.models.length > 0) {
+            let html = '<div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">';
+            data.models.slice(0, 50).forEach(model => {
+                const ctx = model.context_length && model.context_length !== 'Unknown' && model.context_length > 0
+                    ? parseInt(model.context_length).toLocaleString() + ' ctx'
+                    : '';
+                const badges = [];
+                if (model.reasoning) badges.push('<span class="badge bg-warning text-dark rounded-pill ms-1">Reasoning</span>');
+                if (model.vision) badges.push('<span class="badge bg-info rounded-pill ms-1">Vision</span>');
+                if (model.tool_call) badges.push('<span class="badge bg-success rounded-pill ms-1">Tools</span>');
+
+                html += `
+                    <div class="list-group-item py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="fw-bold">${model.name || model.id}</small>
+                            ${ctx ? `<span class="badge bg-secondary rounded-pill">${ctx}</span>` : ''}
+                        </div>
+                        <div class="mt-1">${badges.join('')}</div>
+                    </div>
+                `;
+            });
+            if (data.models.length > 50) {
+                html += `<div class="list-group-item text-muted small text-center">...and ${data.models.length - 50} more models</div>`;
+            }
+            html += '</div>';
+            listDiv.innerHTML = html;
+            _loadedProviders.add(provider);
+        } else {
+            listDiv.innerHTML = '<p class="text-muted small">No models found.</p>';
+        }
+    } catch (error) {
+        listDiv.innerHTML = `<p class="text-danger small">Error: ${error.message}</p>`;
+    }
+}
+
+async function loadOpenRouterModels() {
+    await loadProviderModels('openrouter');
+}
+
+// Update demo models when provider changes
+document.getElementById('demoProvider').addEventListener('change', async function() {
+    const provider = this.value;
+    const datalist = document.getElementById('demoModelList');
+    
+    try {
+        const response = await fetch(`/api/models/${provider}`);
+        const data = await response.json();
+        
+        datalist.innerHTML = '';
+        if (data.models) {
+            data.models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.label = model.name;
+                datalist.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading models:', error);
+    }
+});
+
+// Load initial models
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('demoProvider').dispatchEvent(new Event('change'));
+    // Load OpenAI models by default since that accordion is expanded
+    loadProviderModels('openai');
+});
+</script>
+{% endblock %}
