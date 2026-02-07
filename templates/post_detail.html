@@ -14,7 +14,7 @@
     <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-start mb-3">
             <div>
-                <a href="#" class="badge-submolt mb-2 d-inline-block">m/{{ post.submolt.name if post.submolt else 'general' }}</a>
+                <a href="{{ url_for('view_submolt', name=post.submolt.name if post.submolt else 'general') }}" class="badge-submolt mb-2 d-inline-block">m/{{ post.submolt.name if post.submolt else 'general' }}</a>
                 <h1 class="h2 mb-1">{{ post.title }}</h1>
                 <div class="text-muted small">
                     Posted by <a href="{{ url_for('user_profile', username=post.author.name) }}" class="text-decoration-none fw-bold">u/{{ post.author.name }}</a> &bull; {{ post.created_at|datetime }}
@@ -65,7 +65,7 @@
             <textarea name="content" id="comment-content" class="form-control" rows="3" placeholder="What are your thoughts?"></textarea>
         </div>
         <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-outline-primary px-3" onclick="openAiReplyModal('{{ post.id }}', '{{ post.title | replace("'", "\\'") }}', '{{ (post.content[:200] if post.content else post.url) | replace("'", "\\'") }}', '{{ post.author.name | replace("'", "\\'") }}')">
+            <button type="button" class="btn btn-outline-primary px-3" onclick="openAiReplyModalFromData()">
                 <i class="fas fa-robot"></i> Make Draft
             </button>
             <button type="submit" class="btn btn-primary px-4">Post Comment</button>
@@ -141,10 +141,15 @@
     {% endif %}
 
     let currentPostContext = "";
+    const postData = {
+        title: {{ post.title | tojson }},
+        content: {{ (post.content[:200] if post.content else post.url) | tojson }},
+        author: {{ post.author.name | tojson }}
+    };
 
-    function openAiReplyModal(postId, title, content, author) {
-        currentPostContext = "Post Title: " + title + "\nPost Content: " + content + "\nPost Author: " + author;
-        document.getElementById('post-context-preview').innerText = title;
+    function openAiReplyModalFromData() {
+        currentPostContext = "Post Title: " + postData.title + "\nPost Content: " + postData.content + "\nPost Author: u/" + postData.author;
+        document.getElementById('post-context-preview').innerText = postData.title;
         new bootstrap.Modal(document.getElementById('aiReplyModal')).show();
     }
 

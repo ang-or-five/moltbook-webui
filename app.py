@@ -178,6 +178,8 @@ def login():
             try:
                 resp = http_session.get(f"{API_BASE}/agents/me", headers=headers)
                 if resp.status_code == 200:
+                    data = resp.json()
+                    session['agent_name'] = data.get('name')
                     flash("Welcome back to Moltbook! 🦞", "success")
                     return redirect(url_for('index'))
                 else:
@@ -203,6 +205,8 @@ def login_testing():
     try:
         resp = http_session.get(f"{API_BASE}/agents/me", headers=headers)
         if resp.status_code == 200:
+            data = resp.json()
+            session['agent_name'] = data.get('name')
             flash("Logged in with testing token 🦞", "success")
             return redirect(url_for('index'))
         else:
@@ -392,21 +396,40 @@ def search():
 @app.route('/profile')
 def profile():
     if 'api_key' not in session: return redirect(url_for('login'))
+    
+    # Get own username first
+    agent_name = session.get('agent_name')
+    if not agent_name:
+        resp = http_session.get(f"{API_BASE}/agents/me", headers=get_auth_headers())
+        if resp.status_code == 200:
+            agent_name = resp.json().get('name')
+            session['agent_name'] = agent_name
+    
+    if agent_name:
+        return redirect(url_for('user_profile', username=agent_name))
+    
+    # Fallback if name fetch fails
     resp = http_session.get(f"{API_BASE}/agents/me", headers=get_auth_headers())
     user = {}
-    recent_posts = []
     if resp.status_code == 200:
         data = resp.json()
         user = data.get('agent', data)
-        # Fetch recent posts for current user too if possible, 
-        # but agents/me might not include them. 
-        # If not, we can try search or just leave it empty.
-        recent_posts = data.get('recentPosts', [])
-    return render_template('profile.html', user=user, recentPosts=recent_posts, api_key=session.get('api_key'), is_own_profile=True)
+    return render_template('profile.html', user=user, recentPosts=[], api_key=session.get('api_key'), is_own_profile=True)
 
 @app.route('/u/<username>')
 def user_profile(username):
     if 'api_key' not in session: return redirect(url_for('login'))
+    
+    # Check if this is the logged in user's profile
+    # We might need to fetch 'me' if agent_name isn't in session
+    my_name = session.get('agent_name')
+    if not my_name:
+        me_resp = http_session.get(f"{API_BASE}/agents/me", headers=get_auth_headers())
+        if me_resp.status_code == 200:
+            my_name = me_resp.json().get('name')
+            session['agent_name'] = my_name
+            
+    is_own = (username == my_name)
     
     resp = http_session.get(f"{API_BASE}/agents/profile?name={username}", headers=get_auth_headers())
     if resp.status_code != 200:
@@ -417,7 +440,7 @@ def user_profile(username):
     user = data.get('agent', {})
     recent_posts = data.get('recentPosts', [])
     
-    return render_template('profile.html', user=user, recentPosts=recent_posts, is_own_profile=False)
+    return render_template('profile.html', user=user, recentPosts=recent_posts, api_key=session.get('api_key') if is_own else None, is_own_profile=is_own)
 
 @app.route('/api/users/<username>/follow', methods=['POST'])
 def api_user_follow(username):
@@ -438,6 +461,83 @@ def api_user_follow(username):
                 return jsonify({"error": f"API returned {resp.status_code}"}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/submolts')
+def list_submolts():
+    if 'api_key' not in session: return redirect(url_for('login'))
+    resp = http_session.get(f"{API_BASE}/submolts", headers=get_auth_headers())
+    submolts = []
+    if resp.status_code == 200:
+        data = resp.json()
+        submolts = data.get('data') or data.get('submolts') or data
+        if not isinstance(submolts, list): submolts = []
+    return render_template('submolts.html', submolts=submolts)
+
+@app.route('/m/<name>')
+def view_submolt(name):
+    if 'api_key' not in session: return redirect(url_for('login'))
+    sort = request.args.get('sort', 'hot')
+    
+    headers = get_auth_headers()
+    
+    # Get submolt info
+    s_resp = http_session.get(f"{API_BASE}/submolts/{name}", headers=headers)
+    submolt = {}
+    if s_resp.status_code == 200:
+        submolt = s_resp.json()
+    else:
+        flash(f"Submolt 'm/{name}' not found.", "warning")
+        return redirect(url_for('list_submolts'))
+        
+    # Get feed
+    f_resp = http_session.get(f"{API_BASE}/submolts/{name}/feed?sort={sort}", headers=headers)
+    posts = []
+    if f_resp.status_code == 200:
+        posts_data = f_resp.json()
+        posts = posts_data.get('posts') or posts_data.get('data') or posts_data
+        if not isinstance(posts, list): posts = []
+        
+    return render_template('submolt.html', submolt=submolt, posts=posts, submolt_name=name, sort=sort)
+
+@app.route('/submolts/create', methods=['GET', 'POST'])
+def create_submolt():
+    if 'api_key' not in session: return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        display_name = request.form.get('display_name')
+        description = request.form.get('description')
+        
+        payload = {
+            "name": name,
+            "display_name": display_name,
+            "description": description
+        }
+        
+        resp = http_session.post(f"{API_BASE}/submolts", json=payload, headers=get_auth_headers())
+        
+        if resp.status_code in [200, 201]:
+            flash(f"Submolt m/{name} created!", "success")
+            return redirect(url_for('view_submolt', name=name))
+        else:
+            flash(f"Error creating submolt: {resp.text}", "danger")
+            
+    return render_template('create_submolt.html')
+
+@app.route('/api/submolts/<name>/subscribe', methods=['POST', 'DELETE'])
+def subscribe_submolt(name):
+    if 'api_key' not in session: return jsonify({"error": "Unauthorized"}), 401
+    
+    headers = get_auth_headers()
+    if request.method == 'POST':
+        resp = http_session.post(f"{API_BASE}/submolts/{name}/subscribe", headers=headers)
+    else:
+        resp = http_session.delete(f"{API_BASE}/submolts/{name}/subscribe", headers=headers)
+        
+    if resp.status_code in [200, 201, 204]:
+        return jsonify({"success": True})
+    else:
+        return jsonify({"error": resp.text}), resp.status_code
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
