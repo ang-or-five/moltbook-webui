@@ -1,2 +1,5 @@
 # Shimmer effect guide
 templates/shimmer-effect-guide.md
+data/
+*.jsonl
+dataset_output/

@@ -379,5 +379,366 @@ def translate_text():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# --- Captcha & Data Harvest Routes ---
+
+@app.route('/captcha/solve', methods=['POST'])
+def captcha_solve():
+    """Solve a single captcha challenge and save to dataset."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    challenge = data.get('challenge', '')
+    provider = data.get('provider', 'openai')
+    model = data.get('model', 'gpt-4.1-nano')
+    
+    if not challenge:
+        return jsonify({"error": "No challenge provided"}), 400
+    
+    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+    if not openai_key:
+        return jsonify({"error": "OpenAI API key not configured"}), 400
+    
+    try:
+        from captcha_harvester import solve_captcha_with_ai, save_dataset_entry
+        
+        result = solve_captcha_with_ai(challenge, openai_key, model, provider)
+        save_dataset_entry(result)
+        
+        return jsonify({
+            "success": True,
+            "answer": result['answer'],
+            "cleaned_text": result['preprocessed'],
+            "compressed": result['compressed'],
+            "equation": result['equation'],
+            "task_id": result['timestamp']
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "cleaned_text": challenge
+        }), 500
+
+@app.route('/captcha/harvest', methods=['POST'])
+def captcha_harvest():
+    """Harvest multiple captchas from sample challenges."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    count = data.get('count', 10)
+    provider = data.get('provider', 'openai')
+    model = data.get('model', 'gpt-4.1-nano')
+    
+    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+    if not openai_key:
+        return jsonify({"error": "OpenAI API key not configured"}), 400
+    
+    try:
+        from captcha_harvester import generate_multiple_captchas
+        
+        results = generate_multiple_captchas(openai_key, count, model, provider)
+        
+        return jsonify({
+            "success": True,
+            "harvested": len(results),
+            "results": results
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/captcha/batch', methods=['POST'])
+def captcha_batch():
+    """Harvest captchas from n random unresponded posts."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    n = data.get('n', 10)
+    lean_niche = data.get('lean_niche', True)
+    provider = data.get('provider', 'openai')
+    model = data.get('model', 'gpt-4.1-nano')
+    
+    api_key = session.get('api_key')
+    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+    
+    if not openai_key:
+        return jsonify({"error": "OpenAI API key not configured"}), 400
+    
+    try:
+        from captcha_harvester import fetch_random_posts, harvest_captchas_from_posts
+        
+        # Fetch random posts
+        posts = fetch_random_posts(api_key, n, lean_niche)
+        
+        if not posts:
+            return jsonify({"error": "No unresponded posts found"}), 404
+        
+        # Harvest captchas from posts
+        results = harvest_captchas_from_posts(api_key, openai_key, posts, model, provider)
+        
+        return jsonify({
+            "success": True,
+            "posts_found": len(posts),
+            "harvested": len([r for r in results if 'answer' in r]),
+            "results": results
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/captcha/dataset', methods=['GET'])
+def captcha_dataset():
+    """Get dataset statistics and entries."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        from captcha_harvester import DatasetGenerator
+        
+        generator = DatasetGenerator()
+        stats = generator.get_stats()
+        
+        # Get recent entries (last 50)
+        recent = generator.entries[-50:] if len(generator.entries) > 50 else generator.entries
+        
+        return jsonify({
+            "stats": stats,
+            "recent_entries": recent,
+            "total_entries": len(generator.entries)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/models/<provider>', methods=['GET'])
+def api_models(provider):
+    """Fetch available models for a provider."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Return hardcoded models for now
+        # In production, this could fetch from provider APIs
+        models_map = {
+            'openai': [
+                {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano", "context_length": 128000},
+                {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini", "context_length": 128000},
+                {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "context_length": 128000},
+                {"id": "gpt-4o", "name": "GPT-4o", "context_length": 128000},
+            ],
+            'openrouter': [
+                {"id": "openai/gpt-4.1-nano", "name": "GPT-4.1 Nano (OR)", "context_length": 128000},
+                {"id": "openai/gpt-4.1-mini", "name": "GPT-4.1 Mini (OR)", "context_length": 128000},
+            ],
+            'google': [
+                {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "context_length": 1000000},
+                {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro", "context_length": 2000000},
+            ],
+            'poe': [
+                {"id": "gpt-5-nano", "name": "GPT-5 Nano (Poe)", "context_length": 128000},
+                {"id": "gpt-5-mini", "name": "GPT-5 Mini (Poe)", "context_length": 128000},
+                {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano (Poe)", "context_length": 128000},
+                {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini (Poe)", "context_length": 128000},
+            ]
+        }
+        
+        models = models_map.get(provider, [])
+        return jsonify({"models": models})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- Captcha Demo Route ---
+
+@app.route('/captcha_demo')
+def captcha_demo():
+    """Show captcha demo page."""
+    if 'api_key' not in session:
+        return redirect(url_for('login'))
+    
+    return render_template('captcha_demo.html')
+
+# --- Mass Draft Generation Routes ---
+
+@app.route('/mass-drafts', methods=['GET'])
+def mass_drafts():
+    """Show mass draft generation interface."""
+    if 'api_key' not in session:
+        return redirect(url_for('login'))
+    
+    return render_template('mass_drafts.html')
+
+@app.route('/mass-drafts/generate', methods=['POST'])
+def mass_drafts_generate():
+    """Generate drafts for n random posts."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    n = data.get('n', 10)
+    lean_niche = data.get('lean_niche', True)
+    
+    api_key = session.get('api_key')
+    openai_key = session.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+    personality = session.get('agent_personality', DEFAULT_PERSONALITY)
+    
+    if not openai_key:
+        return jsonify({"error": "OpenAI API key not configured. Please add it in Settings."}), 400
+    
+    try:
+        from captcha_harvester import fetch_random_posts, generate_drafts_for_posts
+        
+        # Fetch random posts
+        posts = fetch_random_posts(api_key, n, lean_niche)
+        
+        if not posts:
+            return jsonify({"error": "No unresponded posts found"}), 404
+        
+        # Generate drafts using settings from session
+        client = get_ai_client()
+        if not client:
+            return jsonify({"error": "AI client not configured. Set OpenAI API key in Settings."}), 400
+        
+        # Generate drafts manually using the client from settings
+        drafts = []
+        for post in posts:
+            try:
+                title = post.get('title', '')
+                content = post.get('content', '')
+                author = post.get('author_name', 'someone')
+                
+                context = f"Post by {author}: {title}"
+                if content:
+                    context += f"\n\n{content[:500]}"
+                
+                prompt = "Write a thoughtful, engaging comment response to this post. Be concise (1-3 sentences), authentic, and add value to the conversation."
+                
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": f"You are an AI agent on Moltbook. Personality: {personality}"},
+                        {"role": "user", "content": f"Context: {context}\n\nTask: {prompt}"}
+                    ]
+                )
+                
+                draft_text = response.choices[0].message.content
+                
+                drafts.append({
+                    'post_id': post.get('id'),
+                    'post_title': post.get('title', '')[:100],
+                    'post_content': post.get('content', '')[:200] if post.get('content') else '',
+                    'post_author': post.get('author_name', 'unknown'),
+                    'draft': draft_text,
+                    'status': 'pending',
+                    'timestamp': datetime.now().isoformat()
+                })
+            except Exception as e:
+                drafts.append({
+                    'post_id': post.get('id'),
+                    'post_title': post.get('title', '')[:100],
+                    'post_content': post.get('content', '')[:200] if post.get('content') else '',
+                    'post_author': post.get('author_name', 'unknown'),
+                    'draft': f"Error: {str(e)}",
+                    'status': 'error',
+                    'timestamp': datetime.now().isoformat()
+                })
+        
+        # Save drafts
+        from captcha_harvester import save_pending_drafts
+        save_pending_drafts(drafts)
+        
+        return jsonify({
+            "success": True,
+            "count": len(drafts),
+            "drafts": drafts
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/mass-drafts/list', methods=['GET'])
+def mass_drafts_list():
+    """Get list of pending drafts."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        from captcha_harvester import load_pending_drafts
+        drafts = load_pending_drafts()
+        return jsonify({"drafts": drafts})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/mass-drafts/approve', methods=['POST'])
+def mass_drafts_approve():
+    """Approve and post a draft."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    post_id = data.get('post_id')
+    draft_text = data.get('draft')
+    
+    if not post_id or not draft_text:
+        return jsonify({"error": "Missing post_id or draft"}), 400
+    
+    api_key = session.get('api_key')
+    
+    try:
+        from captcha_harvester import post_comment, load_pending_drafts, save_pending_drafts
+        
+        # Post the comment
+        success = post_comment(post_id, draft_text, api_key)
+        
+        if success:
+            # Update draft status
+            drafts = load_pending_drafts()
+            for draft in drafts:
+                if draft.get('post_id') == post_id and draft.get('draft') == draft_text:
+                    draft['status'] = 'posted'
+                    break
+            save_pending_drafts(drafts)
+            
+            return jsonify({"success": True, "message": "Draft posted successfully"})
+        else:
+            return jsonify({"error": "Failed to post comment"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/mass-drafts/reject', methods=['POST'])
+def mass_drafts_reject():
+    """Reject a draft."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    post_id = data.get('post_id')
+    draft_text = data.get('draft')
+    
+    try:
+        from captcha_harvester import load_pending_drafts, save_pending_drafts
+        
+        drafts = load_pending_drafts()
+        for draft in drafts:
+            if draft.get('post_id') == post_id and draft.get('draft') == draft_text:
+                draft['status'] = 'rejected'
+                break
+        save_pending_drafts(drafts)
+        
+        return jsonify({"success": True, "message": "Draft rejected"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/mass-drafts/clear', methods=['POST'])
+def mass_drafts_clear():
+    """Clear all pending drafts."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        from captcha_harvester import save_pending_drafts
+        save_pending_drafts([])
+        return jsonify({"success": True, "message": "All drafts cleared"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -1,0 +1,446 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <h1 class="h3 mb-4">
+            <i class="fas fa-robot"></i> Mass Draft Generator
+            <small class="text-muted fs-6 d-block">Generate and approve AI drafts for multiple posts at once</small>
+        </h1>
+        
+        <!-- Generation Controls -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-cogs"></i> Generation Settings
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Number of Posts</label>
+                        <input type="number" id="numPosts" class="form-control" value="10" min="1" max="50">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="leanNiche" checked>
+                            <label class="form-check-label" for="leanNiche">
+                                Lean niche (low engagement)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">AI Settings</label>
+                        <div class="text-muted small">
+                            Using model from <a href="{{ url_for('settings') }}">Settings</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-success" id="generateBtn" onclick="generateDrafts()">
+                        <i class="fas fa-magic"></i> Generate Drafts
+                    </button>
+                    <button class="btn btn-outline-secondary" id="refreshBtn" onclick="loadDrafts()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="clearDrafts()">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                </div>
+                
+                <div class="progress mt-3" id="genProgress" style="display: none;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         id="genProgressBar" 
+                         role="progressbar" 
+                         style="width: 0%">0%</div>
+                </div>
+                
+                <div id="genStatus" class="mt-2"></div>
+            </div>
+        </div>
+        
+        <!-- Stats Summary -->
+        <div class="row mb-4" id="statsRow" style="display: none;">
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0" id="totalCount">0</h3>
+                        <small class="text-muted">Total Drafts</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning bg-opacity-10">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0" id="pendingCount">0</h3>
+                        <small class="text-warning">Pending</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success bg-opacity-10">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0" id="approvedCount">0</h3>
+                        <small class="text-success">Approved</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger bg-opacity-10">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0" id="rejectedCount">0</h3>
+                        <small class="text-danger">Rejected</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Drafts List -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list"></i> Pending Drafts</span>
+                <div>
+                    <button class="btn btn-sm btn-success" onclick="approveAll()">
+                        <i class="fas fa-check-double"></i> Approve All Pending
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="draftsContainer" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="p-4 text-center text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>No drafts generated yet. Click "Generate Drafts" to start.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.draft-item {
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem;
+    transition: background-color 0.2s;
+}
+.draft-item:last-child {
+    border-bottom: none;
+}
+.draft-item:hover {
+    background-color: #f8f9fa;
+}
+.draft-item.posted {
+    background-color: #d4edda;
+    opacity: 0.7;
+}
+.draft-item.rejected {
+    background-color: #f8d7da;
+    opacity: 0.7;
+}
+.draft-item.error {
+    background-color: #fff3cd;
+}
+.draft-actions {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+.draft-item:hover .draft-actions {
+    opacity: 1;
+}
+.post-preview {
+    background: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+.draft-content {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    white-space: pre-wrap;
+}
+</style>
+
+<script>
+let currentDrafts = [];
+
+async function generateDrafts() {
+    const btn = document.getElementById('generateBtn');
+    const progress = document.getElementById('genProgress');
+    const progressBar = document.getElementById('genProgressBar');
+    const status = document.getElementById('genStatus');
+    
+    const numPosts = document.getElementById('numPosts').value;
+    const leanNiche = document.getElementById('leanNiche').checked;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+    progress.style.display = 'block';
+    status.innerHTML = '<span class="text-info">Fetching posts and generating drafts...</span>';
+    
+    // Animate progress
+    let p = 0;
+    const interval = setInterval(() => {
+        p += Math.random() * 10;
+        if (p > 90) p = 90;
+        progressBar.style.width = p + '%';
+        progressBar.textContent = Math.round(p) + '%';
+    }, 500);
+    
+    try {
+        const response = await fetch('/mass-drafts/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                n: parseInt(numPosts),
+                lean_niche: leanNiche
+            })
+        });
+        
+        clearInterval(interval);
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            status.innerHTML = `<span class="text-success">✓ Generated ${data.count} drafts!</span>`;
+            currentDrafts = data.drafts;
+            renderDrafts();
+        } else {
+            throw new Error(data.error || 'Unknown error');
+        }
+    } catch (error) {
+        clearInterval(interval);
+        status.innerHTML = `<span class="text-danger">✗ Error: ${error.message}</span>`;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic"></i> Generate Drafts';
+        setTimeout(() => {
+            progress.style.display = 'none';
+            progressBar.style.width = '0%';
+        }, 2000);
+    }
+}
+
+async function loadDrafts() {
+    try {
+        const response = await fetch('/mass-drafts/list');
+        const data = await response.json();
+        
+        if (data.drafts) {
+            currentDrafts = data.drafts;
+            renderDrafts();
+        }
+    } catch (error) {
+        console.error('Error loading drafts:', error);
+    }
+}
+
+function renderDrafts() {
+    const container = document.getElementById('draftsContainer');
+    const statsRow = document.getElementById('statsRow');
+    
+    if (!currentDrafts || currentDrafts.length === 0) {
+        container.innerHTML = `
+            <div class="p-4 text-center text-muted">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>No drafts generated yet. Click "Generate Drafts" to start.</p>
+            </div>
+        `;
+        statsRow.style.display = 'none';
+        return;
+    }
+    
+    // Update stats
+    const total = currentDrafts.length;
+    const pending = currentDrafts.filter(d => d.status === 'pending').length;
+    const posted = currentDrafts.filter(d => d.status === 'posted').length;
+    const rejected = currentDrafts.filter(d => d.status === 'rejected').length;
+    
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('pendingCount').textContent = pending;
+    document.getElementById('approvedCount').textContent = posted;
+    document.getElementById('rejectedCount').textContent = rejected;
+    statsRow.style.display = 'flex';
+    
+    // Render drafts
+    let html = '';
+    currentDrafts.forEach((draft, index) => {
+        const statusClass = draft.status === 'posted' ? 'posted' : 
+                           draft.status === 'rejected' ? 'rejected' : 
+                           draft.status === 'error' ? 'error' : '';
+        
+        const statusBadge = draft.status === 'posted' ? 
+            '<span class="badge bg-success">Posted</span>' : 
+            draft.status === 'rejected' ? 
+            '<span class="badge bg-danger">Rejected</span>' : 
+            draft.status === 'error' ? 
+            '<span class="badge bg-warning text-dark">Error</span>' :
+            '<span class="badge bg-warning">Pending</span>';
+        
+        html += `
+            <div class="draft-item ${statusClass}" id="draft-${index}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <small class="text-muted">#${index + 1}</small>
+                        ${statusBadge}
+                    </div>
+                    <small class="text-muted">${new Date(draft.timestamp).toLocaleString()}</small>
+                </div>
+                
+                <div class="post-preview">
+                    <strong>${escapeHtml(draft.post_title || 'Untitled')}</strong>
+                    <small class="text-muted d-block">by ${escapeHtml(draft.post_author || 'unknown')}</small>
+                    ${draft.post_content ? `<small class="text-muted d-block mt-1">${escapeHtml(draft.post_content.substring(0, 100))}...</small>` : ''}
+                </div>
+                
+                <div class="draft-content mb-2">
+                    ${escapeHtml(draft.draft)}
+                </div>
+                
+                <div class="draft-actions d-flex gap-2">
+                    ${draft.status === 'pending' ? `
+                        <button class="btn btn-sm btn-success" onclick="approveDraft(${index})">
+                            <i class="fas fa-check"></i> Approve & Post
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="rejectDraft(${index})">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    ` : ''}
+                    <a href="/post/${draft.post_id}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> View Post
+                    </a>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+async function approveDraft(index) {
+    const draft = currentDrafts[index];
+    if (!draft || draft.status !== 'pending') return;
+    
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Posting...';
+    
+    try {
+        const response = await fetch('/mass-drafts/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                post_id: draft.post_id,
+                draft: draft.draft
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            draft.status = 'posted';
+            renderDrafts();
+        } else {
+            throw new Error(data.error || 'Failed to post');
+        }
+    } catch (error) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Approve & Post';
+        alert('Error: ' + error.message);
+    }
+}
+
+async function rejectDraft(index) {
+    const draft = currentDrafts[index];
+    if (!draft || draft.status !== 'pending') return;
+    
+    if (!confirm('Are you sure you want to reject this draft?')) return;
+    
+    try {
+        const response = await fetch('/mass-drafts/reject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                post_id: draft.post_id,
+                draft: draft.draft
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            draft.status = 'rejected';
+            renderDrafts();
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function approveAll() {
+    const pending = currentDrafts.filter(d => d.status === 'pending');
+    if (pending.length === 0) {
+        alert('No pending drafts to approve!');
+        return;
+    }
+    
+    if (!confirm(`Approve and post all ${pending.length} pending drafts?`)) return;
+    
+    for (let draft of pending) {
+        try {
+            const response = await fetch('/mass-drafts/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    post_id: draft.post_id,
+                    draft: draft.draft
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                draft.status = 'posted';
+            }
+        } catch (error) {
+            console.error('Error posting draft:', error);
+        }
+    }
+    
+    renderDrafts();
+    alert('Batch approval complete!');
+}
+
+async function clearDrafts() {
+    if (!confirm('Are you sure you want to clear all drafts?')) return;
+    
+    try {
+        const response = await fetch('/mass-drafts/clear', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentDrafts = [];
+            renderDrafts();
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load drafts on page load
+document.addEventListener('DOMContentLoaded', loadDrafts);
+</script>
+{% endblock %}

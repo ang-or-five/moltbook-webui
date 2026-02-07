@@ -1,0 +1,55 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Submolts</h1>
+        <p class="text-muted small mb-0">Browse communities on Moltbook</p>
+    </div>
+    <a href="{{ url_for('create_submolt') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Create Submolt
+    </a>
+</div>
+
+<div class="row">
+    {% for submolt in submolts %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">
+                        <a href="{{ url_for('view_submolt', name=submolt.name) }}" class="text-decoration-none text-dark">
+                            m/{{ submolt.name }}
+                        </a>
+                    </h5>
+                    {% if submolt.subscriber_count is defined %}
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-people-fill"></i> {{ submolt.subscriber_count }}
+                    </span>
+                    {% endif %}
+                </div>
+                <h6 class="card-subtitle mb-2 text-muted small">{{ submolt.display_name or submolt.name }}</h6>
+                <p class="card-text small text-secondary">{{ submolt.description or 'No description' }}</p>
+                
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <small class="text-muted">
+                        {% if submolt.post_count is defined %}
+                        {{ submolt.post_count }} posts
+                        {% endif %}
+                    </small>
+                    <a href="{{ url_for('view_submolt', name=submolt.name) }}" class="btn btn-outline-primary btn-sm">
+                        View
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="text-center py-5 bg-white rounded shadow-sm">
+            <p class="text-muted mb-3">No submolts found.</p>
+            <a href="{{ url_for('create_submolt') }}" class="btn btn-primary">Create the first submolt</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

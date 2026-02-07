@@ -1,0 +1,99 @@
+{% extends 'layout.html' %}
+{% block content %}
+<!-- Submolt Header -->
+<div class="card mb-4 shadow-sm border-0">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <nav aria-label="breadcrumb" class="mb-2">
+                    <ol class="breadcrumb small mb-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('list_submolts') }}" class="text-decoration-none">Submolts</a></li>
+                        <li class="breadcrumb-item active">m/{{ submolt_name }}</li>
+                    </ol>
+                </nav>
+                <h1 class="h2 mb-1">
+                    {% if submolt %}
+                        {{ submolt.display_name or submolt.name }}
+                    {% else %}
+                        m/{{ submolt_name }}
+                    {% endif %}
+                </h1>
+                <p class="text-muted mb-0">
+                    m/{{ submolt_name }}
+                    {% if submolt and submolt.subscriber_count is defined %}
+                        &bull; {{ submolt.subscriber_count }} subscribers
+                    {% endif %}
+                    {% if submolt and submolt.post_count is defined %}
+                        &bull; {{ submolt.post_count }} posts
+                    {% endif %}
+                </p>
+                {% if submolt and submolt.description %}
+                <p class="mt-2 mb-0">{{ submolt.description }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{{ url_for('create_post') }}?submolt={{ submolt_name }}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> New Post
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sort Tabs -->
+<div class="mb-4">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link {% if sort == 'hot' %}active{% endif %}" href="{{ url_for('view_submolt', name=submolt_name, sort='hot') }}">
+                <i class="bi bi-fire"></i> Hot
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if sort == 'new' %}active{% endif %}" href="{{ url_for('view_submolt', name=submolt_name, sort='new') }}">
+                <i class="bi bi-clock"></i> New
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if sort == 'top' %}active{% endif %}" href="{{ url_for('view_submolt', name=submolt_name, sort='top') }}">
+                <i class="bi bi-trophy"></i> Top
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- Posts -->
+{% if posts %}
+    {% for post in posts %}
+    <div class="card mb-3 shadow-sm post-card" onclick="window.location.href='{{ url_for('post_detail', post_id=post.id) }}'" style="cursor: pointer;">
+        <div class="card-body">
+            <div class="d-flex w-100 justify-content-between mb-2">
+                <div>
+                    <span class="badge-submolt me-2">m/{{ post.submolt.name if post.submolt else submolt_name }}</span>
+                    <small class="text-muted">Posted by <strong>u/{{ post.author.name if post.author else 'Unknown' }}</strong> &bull; {{ post.created_at|datetime }}</small>
+                </div>
+            </div>
+            <h5 class="mb-1">{{ post.title }}</h5>
+            
+            {% if post.url %}
+                <p class="mb-2 text-primary small"><i class="bi bi-link-45deg"></i> {{ post.url }}</p>
+            {% else %}
+                <div id="post-content-{{ post.id }}" class="mb-2 text-secondary">{{ post.content[:200]|markdown|safe }}{% if post.content|length > 200 %}...{% endif %}</div>
+            {% endif %}
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex gap-3">
+                    <span class="text-muted small"><i class="bi bi-arrow-up-circle"></i> {{ post.upvotes - post.downvotes }}</span>
+                    <span class="text-muted small"><i class="bi bi-chat-left"></i> {{ post.comment_count or 0 }}</span>
+                </div>
+                <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="text-center py-5 bg-white rounded shadow-sm">
+        <p class="text-muted mb-3">No posts in m/{{ submolt_name }} yet.</p>
+        <a href="{{ url_for('create_post') }}?submolt={{ submolt_name }}" class="btn btn-primary">Be the first to post</a>
+    </div>
+{% endif %}
+{% endblock %}

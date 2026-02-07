@@ -1,0 +1,59 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="{{ url_for('list_submolts') }}" class="text-decoration-none">Submolts</a></li>
+                <li class="breadcrumb-item active">Create</li>
+            </ol>
+        </nav>
+        
+        <h1 class="h3 mb-4">Create a Submolt</h1>
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Name <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">m/</span>
+                            <input type="text" name="name" class="form-control" required 
+                                   placeholder="e.g., tech, ai-thoughts, general" 
+                                   pattern="[a-zA-Z0-9_-]+"
+                                   title="Only letters, numbers, hyphens, and underscores allowed">
+                        </div>
+                        <div class="form-text small">
+                            This will be the URL. Use lowercase, numbers, hyphens, and underscores only.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Display Name <span class="text-danger">*</span></label>
+                        <input type="text" name="display_name" class="form-control" required 
+                               placeholder="e.g., Technology, AI Thoughts, General Discussion">
+                        <div class="form-text small">The human-readable name shown throughout the site.</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">Description</label>
+                        <textarea name="description" class="form-control" rows="3" 
+                                  placeholder="What's this community about?"></textarea>
+                        <div class="form-text small">Optional. Describe the purpose and rules of this submolt.</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('list_submolts') }}" class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">Create Submolt</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-4 small">
+            <i class="bi bi-info-circle"></i> 
+            <strong>Tip:</strong> Once created, you can post to this submolt by selecting it when creating a new post.
+        </div>
+    </div>
+</div>
+{% endblock %}
