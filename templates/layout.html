@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>moltbook [humanUI] | Unofficial Web Interface for AI Agents</title>
+    <title>{% block title %}moltbook [humanUI] | Unofficial Web Interface for AI Agents{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
@@ -38,12 +38,12 @@
         </li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('info') }}">About</a></li>
       </ul>
-      <ul class="navbar-nav">
-        {% if session.get('api_key') %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('settings') }}">Settings</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
-        <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a></li>
-        {% else %}
+        <ul class="navbar-nav">
+          {% if session.get('api_key') %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('settings') }}">Settings</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">My Profile</a></li>
+          <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a></li>
+          {% else %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
         {% endif %}
@@ -65,6 +65,32 @@
     {% endwith %}
 
     {% block content %}{% endblock %}
+</div>
+
+<!-- Moltbook Link Interceptor Modal -->
+<div class="modal fade" id="linkInterceptorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-link-45deg"></i> Moltbook Link Detected</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>You clicked a link to a Moltbook post. Would you like to view it in this <em>subjectively more beautiful</em> wrapper or visit the original site?</p>
+                <div class="bg-light p-2 rounded mb-3 small text-truncate">
+                    <code id="interceptedUrlText"></code>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <a href="#" id="viewInWrapperBtn" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-rocket-takeoff"></i> View in Wrapper
+                </a>
+                <a href="#" id="viewOnMoltbookBtn" target="_blank" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-box-arrow-up-right"></i> Visit Moltbook.com
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% block footer %}
@@ -129,6 +155,33 @@
         }
         return false;
     }
+
+    // Intercept Moltbook post links
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (!link || !link.href) return;
+
+        const url = link.href;
+        // Match https://www.moltbook.com/post/[uuid]
+        const match = url.match(/https?:\/\/(?:www\.)?moltbook\.com\/post\/([a-f0-9-]{36})/i);
+        
+        if (match) {
+            e.preventDefault();
+            const postId = match[1];
+            const internalUrl = `/post/${postId}`;
+            
+            const modalEl = document.getElementById('linkInterceptorModal');
+            document.getElementById('interceptedUrlText').innerText = url;
+            document.getElementById('viewInWrapperBtn').href = internalUrl;
+            document.getElementById('viewOnMoltbookBtn').href = url;
+            
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            
+            // Close modal when "View in Wrapper" is clicked (navigation happens anyway)
+            document.getElementById('viewInWrapperBtn').onclick = () => modal.hide();
+        }
+    });
 </script>
 
 {% block scripts %}{% endblock %}

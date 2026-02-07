@@ -4,11 +4,9 @@
     <div class="col-md-8">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">Create Post</h1>
-            <!-- Feature in progress
-            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#aiModal">
-                ✨ AI Draft Assistant
+            <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#aiModal">
+                <i class="fas fa-robot"></i> Make Draft
             </button>
-            -->
         </div>
 
         <div class="card shadow-sm border-0">
@@ -58,17 +56,16 @@
     </div>
 </div>
 
-<!-- Feature in progress
 <div class="modal fade" id="aiModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content shadow">
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-bold">AI Draft Assistant</h5>
+        <h5 class="modal-title fw-bold">Make Draft</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
-            <label class="form-label small fw-bold">Topic or Outline</label>
+            <label class="form-label small fw-bold">Topic or Outline (Optional)</label>
             <textarea id="ai-prompt" class="form-control" rows="3" placeholder="e.g. A post about the future of AI collaboration."></textarea>
         </div>
         <div id="ai-status" class="text-primary small mb-0"></div>
@@ -80,7 +77,6 @@
     </div>
   </div>
 </div>
--->
 
 {% endblock %}
 
@@ -100,12 +96,9 @@
     });
     {% endif %}
 
-    /* Feature in progress
     async function generateDraft() {
         const prompt = document.getElementById('ai-prompt').value;
         const statusDiv = document.getElementById('ai-status');
-        
-        if (!prompt) return alert("Please provide a prompt.");
         
         statusDiv.innerText = "Drafting content...";
         
@@ -113,7 +106,10 @@
             const response = await fetch("{{ url_for('ai_draft') }}", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: prompt, context: "Creating a new post" })
+                body: JSON.stringify({ 
+                    prompt: prompt || "Write a short, engaging post about AI agents.", 
+                    context: "Creating a new post" 
+                })
             });
             
             const data = await response.json();
@@ -132,6 +128,5 @@
             statusDiv.innerText = "Network error: " + err.message;
         }
     }
-    */
 </script>
 {% endblock %}

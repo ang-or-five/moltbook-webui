@@ -3,9 +3,11 @@ import json
 import requests
 import markdown
 import bleach
+import threading
+import time
 from datetime import datetime
 from urllib.parse import urlparse
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, Response, stream_with_context
 from flask_caching import Cache
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -100,8 +102,8 @@ def get_provider_key(provider, purpose='draft'):
         api_key = os.getenv(env_map.get(provider, ''))
     return api_key
 
-def get_ai_client(provider='openai', purpose='draft'):
-    api_key = get_provider_key(provider, purpose)
+def get_ai_client(provider='openai', purpose='draft', override_key=None):
+    api_key = override_key or get_provider_key(provider, purpose)
     if not api_key:
         return None
         
@@ -392,10 +394,50 @@ def profile():
     if 'api_key' not in session: return redirect(url_for('login'))
     resp = http_session.get(f"{API_BASE}/agents/me", headers=get_auth_headers())
     user = {}
+    recent_posts = []
     if resp.status_code == 200:
         data = resp.json()
         user = data.get('agent', data)
-    return render_template('profile.html', user=user, api_key=session.get('api_key'))
+        # Fetch recent posts for current user too if possible, 
+        # but agents/me might not include them. 
+        # If not, we can try search or just leave it empty.
+        recent_posts = data.get('recentPosts', [])
+    return render_template('profile.html', user=user, recentPosts=recent_posts, api_key=session.get('api_key'), is_own_profile=True)
+
+@app.route('/u/<username>')
+def user_profile(username):
+    if 'api_key' not in session: return redirect(url_for('login'))
+    
+    resp = http_session.get(f"{API_BASE}/agents/profile?name={username}", headers=get_auth_headers())
+    if resp.status_code != 200:
+        flash(f"User '{username}' not found.", "danger")
+        return redirect(url_for('index'))
+    
+    data = resp.json()
+    user = data.get('agent', {})
+    recent_posts = data.get('recentPosts', [])
+    
+    return render_template('profile.html', user=user, recentPosts=recent_posts, is_own_profile=False)
+
+@app.route('/api/users/<username>/follow', methods=['POST'])
+def api_user_follow(username):
+    """Follow a user."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    headers = {"Authorization": f"Bearer {session['api_key']}"}
+    try:
+        resp = http_session.post(f"{API_BASE}/agents/{username}/follow", headers=headers)
+        if resp.status_code in [200, 201]:
+            return jsonify({"success": True})
+        else:
+            try:
+                err_data = resp.json()
+                return jsonify(err_data), resp.status_code
+            except:
+                return jsonify({"error": f"API returned {resp.status_code}"}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -465,11 +507,15 @@ def ai_draft():
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": f"You are an AI agent on Moltbook. Personality: {personality}"},
+                {"role": "system", "content": f"You are an AI agent on Moltbook, a social network for AI agents only. Personality: {personality}"},
                 {"role": "user", "content": f"Context: {context}\n\nTask: {prompt}"}
             ]
         )
         draft = response.choices[0].message.content
+        if draft:
+            draft = draft.strip()
+        else:
+            draft = ""
         return jsonify({"draft": draft})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -801,94 +847,265 @@ def mass_drafts():
     
     return render_template('mass_drafts.html')
 
-@app.route('/mass-drafts/generate', methods=['POST'])
-def mass_drafts_generate():
-    """Generate drafts for n random posts."""
+@app.route('/api/agents/me', methods=['GET'])
+def api_agents_me():
+    """Get current agent info."""
     if 'api_key' not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
-    data = request.json
+    headers = {"Authorization": f"Bearer {session['api_key']}"}
+    try:
+        resp = http_session.get(f"{API_BASE}/agents/me", headers=headers)
+        return (resp.text, resp.status_code, resp.headers.items())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/posts', methods=['GET'])
+def api_posts():
+    """Proxy to fetch posts from Moltbook API."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    sort = request.args.get('sort', 'hot')
+    limit = request.args.get('limit', 50)
+    
+    headers = {"Authorization": f"Bearer {session['api_key']}"}
+    try:
+        resp = http_session.get(f"{API_BASE}/posts?sort={sort}&limit={limit}", headers=headers)
+        if resp.status_code == 200:
+            data = resp.json()
+            # Normalize to list
+            posts = []
+            if isinstance(data, list):
+                posts = data
+            elif isinstance(data, dict):
+                posts = data.get('posts') or data.get('data') or data.get('results') or []
+                if isinstance(posts, dict) and 'posts' in posts:
+                    posts = posts['posts']
+                if not isinstance(posts, list):
+                    posts = []
+            return jsonify(posts)
+        else:
+            try:
+                err_data = resp.json()
+                return jsonify(err_data), resp.status_code
+            except:
+                return jsonify({"error": f"API returned {resp.status_code}"}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/mass-drafts/generate', methods=['POST'])
+def mass_drafts_generate():
+    """Generate drafts for n random posts with streaming updates or async."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json or {}
     n = data.get('n', 10)
     lean_niche = data.get('lean_niche', True)
+    sort = data.get('sort', 'hot')
+    is_async = data.get('async', False)
+    post_ids = data.get('post_ids')
+    skip_commented = data.get('skip_commented', True)
     
-    api_key = session.get('api_key')
+    api_key = session.get('api_key', '')
     provider = session.get('draft_ai_provider', 'openai')
     personality = session.get('agent_personality', DEFAULT_PERSONALITY)
+    model = session.get('draft_model', 'gpt-4o-mini')
     
+    # Get AI Provider key for background task
+    ai_provider_key = get_provider_key(provider, 'draft') or ''
+    
+    # Get agent name for filtering
+    agent_name = session.get('agent_name')
+    if not agent_name and api_key:
+        try:
+            headers = {"Authorization": f"Bearer {api_key}"}
+            resp = http_session.get(f"{API_BASE}/agents/me", headers=headers)
+            if resp.status_code == 200:
+                agent_name = resp.json().get('name')
+                session['agent_name'] = agent_name
+        except:
+            pass
+
     client = get_ai_client(provider)
     if not client:
         return jsonify({"error": f"{provider.capitalize()} API key not configured. Please add it in Settings."}), 400
-    
-    try:
-        from captcha_harvester import fetch_random_posts, generate_drafts_for_posts
-        
-        # Fetch random posts
-        posts = fetch_random_posts(api_key, n, lean_niche)
-        
-        if not posts:
-            return jsonify({"error": "No unresponded posts found"}), 404
-        
-        model = session.get('draft_model', 'gpt-4o-mini')
-        
-        # Strip provider prefix for Poe
-        if provider == 'poe' and '/' in model:
-            model = model.split('/')[-1]
-        
-        # Generate drafts manually using the client from settings
-        drafts = []
-        for post in posts:
-            try:
-                title = post.get('title', '')
-                content = post.get('content', '')
-                author = post.get('author_name', 'someone')
-                
-                context = f"Post by {author}: {title}"
-                if content:
-                    context += f"\n\n{content[:500]}"
-                
-                prompt = "Write a thoughtful, engaging comment response to this post. Be concise (1-3 sentences), authentic, and add value to the conversation."
-                
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": f"You are an AI agent on Moltbook. Personality: {personality}"},
-                        {"role": "user", "content": f"Context: {context}\n\nTask: {prompt}"}
-                    ]
-                )
-                
-                draft_text = response.choices[0].message.content
-                
-                drafts.append({
-                    'post_id': post.get('id'),
-                    'post_title': post.get('title', '')[:100],
-                    'post_content': post.get('content', '')[:200] if post.get('content') else '',
-                    'post_author': post.get('author_name', 'unknown'),
-                    'draft': draft_text,
-                    'status': 'pending',
-                    'timestamp': datetime.now().isoformat()
-                })
-            except Exception as e:
-                drafts.append({
-                    'post_id': post.get('id'),
-                    'post_title': post.get('title', '')[:100],
-                    'post_content': post.get('content', '')[:200] if post.get('content') else '',
-                    'post_author': post.get('author_name', 'unknown'),
-                    'draft': f"Error: {str(e)}",
-                    'status': 'error',
-                    'timestamp': datetime.now().isoformat()
-                })
-        
-        # Save drafts
-        from captcha_harvester import save_pending_drafts
-        save_pending_drafts(drafts)
-        
-        return jsonify({
-            "success": True,
-            "count": len(drafts),
-            "drafts": drafts
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+    def generate_task(molt_key, ai_key, n, lean_niche, sort, provider, personality, model, agent_name, post_ids=None, skip_commented=True):
+        try:
+            from captcha_harvester import fetch_random_posts, load_pending_drafts, save_pending_drafts
+            
+            if post_ids:
+                # Fetch specific posts
+                posts = []
+                headers = {"Authorization": f"Bearer {molt_key}"}
+                for pid in post_ids:
+                    try:
+                        resp = http_session.get(f"{API_BASE}/posts/{pid}", headers=headers)
+                        if resp.status_code == 200:
+                            posts.append(resp.json())
+                    except: pass
+            else:
+                # Fetch random posts
+                posts = fetch_random_posts(molt_key, n, lean_niche, sort, agent_name=agent_name if skip_commented else None)
+            
+            if not posts:
+                return
+            
+            # Strip provider prefix for Poe
+            if provider == 'poe' and '/' in model:
+                model = model.split('/')[-1]
+            
+            for i, post in enumerate(posts):
+                try:
+                    title = post.get('title', '')
+                    author = post.get('author_name', 'someone')
+                    
+                    content = post.get('content', '')
+                    title = post.get('title', 'Untitled Post')
+                    context = f"Post Title: {title}\nPost Author: {author}"
+                    if content:
+                        context += f"\nPost Content: {content[:500]}"
+                    
+                    prompt = "Write a thoughtful, engaging comment response to this post. Be concise (1-3 sentences), authentic, and add value to the conversation. Do not ask for more information, just provide the draft based on what is visible."
+                    
+                    # Re-initialize client in thread
+                    task_client = get_ai_client(provider, override_key=ai_key)
+                    if not task_client: continue
+
+                    response = task_client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": f"You are an AI agent on Moltbook, a social network for AI agents only. Personality: {personality}"},
+                            {"role": "user", "content": f"Here is the context for the draft:\n{context}\n\nTask: {prompt}"}
+                        ]
+                    )
+                    
+                    draft_text = response.choices[0].message.content
+                    draft_text = draft_text.strip() if draft_text else ""
+                    
+                    draft_obj = {
+                        'post_id': post.get('id'),
+                        'post_title': post.get('title', '')[:100],
+                        'post_content': post.get('content', '')[:200] if post.get('content') else '',
+                        'post_author': author,
+                        'draft': draft_text,
+                        'status': 'pending',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    
+                    # Save incrementally to be safe
+                    all_drafts = load_pending_drafts()
+                    all_drafts.append(draft_obj)
+                    save_pending_drafts(all_drafts)
+                    
+                except Exception as e:
+                    print(f"Error generating draft in background: {e}")
+                    
+        except Exception as e:
+            print(f"Background task error: {e}")
+
+    if is_async:
+        thread = threading.Thread(target=generate_task, args=(
+            api_key, ai_provider_key, n, lean_niche, sort, provider, personality, model, agent_name, post_ids, skip_commented
+        ))
+        thread.daemon = True
+        thread.start()
+        return jsonify({"success": True, "message": f"Started background generation. They will appear in the list as they are ready."})
+
+    def generate_stream():
+        try:
+            from captcha_harvester import fetch_random_posts, load_pending_drafts, save_pending_drafts
+            
+            if post_ids:
+                posts = []
+                headers = {"Authorization": f"Bearer {api_key}"}
+                for pid in post_ids:
+                    try:
+                        resp = http_session.get(f"{API_BASE}/posts/{pid}", headers=headers)
+                        if resp.status_code == 200:
+                            posts.append(resp.json())
+                    except: pass
+            else:
+                yield f"data: {json.dumps({'type': 'log', 'message': f'Searching for {n} unresponded posts (sort: {sort})...'})}\n\n"
+                # Fetch random posts
+                posts = fetch_random_posts(api_key, n, lean_niche, sort, agent_name=agent_name if skip_commented else None)
+            
+            if not posts:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'No unresponded posts found'})}\n\n"
+                return
+            
+            yield f"data: {json.dumps({'type': 'log', 'message': f'Found {len(posts)} posts. Starting AI generation...'})}\n\n"
+            
+            # Strip provider prefix for Poe
+            actual_model = model
+            if provider == 'poe' and '/' in actual_model:
+                actual_model = actual_model.split('/')[-1]
+            
+            for i, post in enumerate(posts):
+                try:
+                    title = post.get('title', '')
+                    author = post.get('author_name', 'someone')
+                    
+                    yield f"data: {json.dumps({'type': 'log', 'message': f'[{i+1}/{len(posts)}] Drafting for: {title[:40]}...'})}\n\n"
+                    
+                    content = post.get('content', '')
+                    title = post.get('title', 'Untitled Post')
+                    context = f"Post Title: {title}\nPost Author: {author}"
+                    if content:
+                        context += f"\nPost Content: {content[:500]}"
+                    
+                    prompt = "Write a thoughtful, engaging comment response to this post. Be concise (1-3 sentences), authentic, and add value to the conversation. Do not ask for more information, just provide the draft based on what is visible."
+                    
+                    response = client.chat.completions.create(
+                        model=actual_model,
+                        messages=[
+                            {"role": "system", "content": f"You are an AI agent on Moltbook, a social network for AI agents only. Personality: {personality}"},
+                            {"role": "user", "content": f"Here is the context for the draft:\n{context}\n\nTask: {prompt}"}
+                        ]
+                    )
+                    
+                    draft_text = response.choices[0].message.content
+                    draft_text = draft_text.strip() if draft_text else ""
+                    
+                    draft_obj = {
+                        'post_id': post.get('id'),
+                        'post_title': post.get('title', '')[:100],
+                        'post_content': post.get('content', '')[:200] if post.get('content') else '',
+                        'post_author': author,
+                        'draft': draft_text,
+                        'status': 'pending',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    
+                    all_drafts = load_pending_drafts()
+                    all_drafts.append(draft_obj)
+                    save_pending_drafts(all_drafts)
+                    
+                    yield f"data: {json.dumps({'type': 'draft', 'draft': draft_obj, 'index': i, 'total': len(posts)})}\n\n"
+                    
+                except Exception as e:
+                    error_draft = {
+                        'post_id': post.get('id'),
+                        'post_title': post.get('title', '')[:100],
+                        'post_content': post.get('content', '')[:200] if post.get('content') else '',
+                        'post_author': post.get('author_name', 'unknown'),
+                        'draft': f"Error: {str(e)}",
+                        'status': 'error',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    all_drafts = load_pending_drafts()
+                    all_drafts.append(error_draft)
+                    save_pending_drafts(all_drafts)
+                    yield f"data: {json.dumps({'type': 'draft', 'draft': error_draft, 'index': i, 'total': len(posts)})}\n\n"
+            
+            yield f"data: {json.dumps({'type': 'done', 'count': len(posts)})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return Response(stream_with_context(generate_stream()), mimetype='text/event-stream')
 
 @app.route('/mass-drafts/list', methods=['GET'])
 def mass_drafts_list():

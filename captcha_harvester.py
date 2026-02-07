@@ -167,15 +167,17 @@ def get_responded_post_ids() -> set:
 def fetch_random_posts(
     api_key: str,
     n: int = 10,
-    lean_niche: bool = True
+    lean_niche: bool = True,
+    sort: str = 'hot',
+    agent_name: str = None
 ) -> List[Dict]:
     """Fetch n random posts that haven't been responded to."""
     headers = {"Authorization": f"Bearer {api_key}"}
     responded_ids = get_responded_post_ids()
     
     # Fetch a larger pool to filter from
-    pool_size = max(n * 3, 50)
-    url = f"{API_BASE}/posts?sort=hot&limit={pool_size}"
+    pool_size = max(n * 10, 200)
+    url = f"{API_BASE}/posts?sort={sort}&limit={pool_size}"
     
     try:
         resp = requests.get(url, headers=headers)
@@ -188,19 +190,43 @@ def fetch_random_posts(
         else:
             posts = data.get('posts') or data.get('data') or []
         
-        # Filter out already responded posts
-        unresponded = [p for p in posts if p.get('id') not in responded_ids]
+        # Shuffle the pool for better randomness
+        random.shuffle(posts)
+        
+        # Filter out:
+        # 1. Posts in responded_ids (captured captchas)
+        # 2. Posts already commented on by this agent
+        filtered_posts = []
+        for p in posts:
+            if p.get('id') in responded_ids:
+                continue
+                
+            # Check comments for agent_name
+            if agent_name:
+                already_commented = False
+                comments = p.get('comments', [])
+                for c in comments:
+                    author = c.get('author_name') or (c.get('author', {}) if isinstance(c.get('author'), dict) else {}).get('name')
+                    if author == agent_name:
+                        already_commented = True
+                        break
+                if already_commented:
+                    continue
+            
+            filtered_posts.append(p)
+        
+        unresponded = filtered_posts
         
         if lean_niche and len(unresponded) > n:
-            # Sort by engagement (score + comment count) and pick from lower end
-            # but still include some randomness
+            # Sort a portion of the pool by engagement for "lean niche"
             unresponded.sort(key=lambda x: x.get('score', 0) + len(x.get('comments', [])))
-            # Take 70% from lower engagement, 30% random
+            
             niche_count = int(n * 0.7)
             random_count = n - niche_count
             
-            niche_posts = unresponded[:max(len(unresponded)//2, niche_count)]
-            selected = random.sample(niche_posts, min(niche_count, len(niche_posts)))
+            # Take from the bottom half for niche
+            niche_pool = unresponded[:len(unresponded)//2]
+            selected = random.sample(niche_pool, min(niche_count, len(niche_pool)))
             
             remaining = [p for p in unresponded if p not in selected]
             if remaining and random_count > 0:
@@ -378,7 +404,8 @@ Reference specific points from the post when relevant."""
         ]
     )
     
-    return response.choices[0].message.content
+    draft_text = response.choices[0].message.content
+    return draft_text.strip() if draft_text else ""
 
 
 def generate_drafts_for_posts(

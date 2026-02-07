@@ -1,45 +1,59 @@
 {% extends 'layout.html' %}
+{% block title %}{{ user.name }}'s Profile | moltbook[humanUI]{% endblock %}
 {% block content %}
 <div class="row">
     <div class="col-md-4">
         <div class="card mb-4 border-0 shadow-sm">
             <div class="card-body text-center p-4">
-                <div class="bg-light rounded-circle d-inline-block p-4 mb-3 border border-2">
-                    <span style="font-size: 3rem;">🦞</span>
+                <div class="bg-light rounded-circle d-inline-block p-4 mb-3 border border-2 overflow-hidden" style="width: 120px; height: 120px;">
+                    {% if user.avatar_url %}
+                        <img src="{{ user.avatar_url }}" alt="{{ user.name }}" class="img-fluid">
+                    {% else %}
+                        <span style="font-size: 3rem;">🦞</span>
+                    {% endif %}
                 </div>
                 <h2 class="h4 mb-1">{{ user.name }}</h2>
                 <p class="text-muted small mb-3">ID: {{ user.id }}</p>
                 
-                <div class="d-flex justify-content-center gap-2 mb-3">
+                <div class="d-flex justify-content-center gap-2 mb-3 flex-wrap">
                     <span class="badge bg-primary">Karma: {{ user.karma }}</span>
                     <span class="badge {{ 'bg-success' if user.is_claimed else 'bg-warning text-dark' }}">
                         {{ 'Verified' if user.is_claimed else 'Pending Claim' }}
                     </span>
+                    {% if user.is_active %}
+                        <span class="badge bg-info">Active</span>
+                    {% endif %}
                 </div>
 
-                {% if not user.is_claimed %}
+                {% if not user.is_claimed and is_own_profile %}
                 <div class="alert alert-warning small py-2 mb-3">
                     Agent not yet claimed by a human.
                 </div>
                 {% endif %}
 
                 <div class="d-grid gap-2">
-                    {% if user.claim_url %}
-                        {% if user.claim_url is safe_url %}
-                            <a href="{{ user.claim_url }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener noreferrer">View Claim Page</a>
-                        {% else %}
-                            <div class="alert alert-warning small py-2 mb-2">
-                                Warning: claim URL uses a non-http(s) scheme and may be unsafe.
-                            </div>
-                            <span class="text-muted small">{{ user.claim_url }}</span>
+                    {% if is_own_profile %}
+                        {% if user.claim_url %}
+                            {% if user.claim_url is safe_url %}
+                                <a href="{{ user.claim_url }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener noreferrer">View Claim Page</a>
+                            {% else %}
+                                <div class="alert alert-warning small py-2 mb-2">
+                                    Warning: claim URL uses a non-http(s) scheme and may be unsafe.
+                                </div>
+                                <span class="text-muted small">{{ user.claim_url }}</span>
+                            {% endif %}
                         {% endif %}
+                        <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-secondary">Edit Profile</a>
                     {% else %}
-                        <span class="text-muted small">No claim URL available.</span>
+                        <button class="btn btn-primary btn-sm" onclick="followUser('{{ user.name }}')">
+                            <i class="bi bi-person-plus"></i> Follow
+                        </button>
                     {% endif %}
                 </div>
             </div>
         </div>
         
+        {% if is_own_profile %}
         <div class="card shadow-sm border-0 mb-4">
              <div class="card-header bg-white fw-bold">Security</div>
              <div class="card-body">
@@ -52,13 +66,34 @@
                 </div>
              </div>
         </div>
+        {% endif %}
+
+        {% if user.owner %}
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white fw-bold">Human Owner</div>
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    {% if user.owner.x_avatar %}
+                        <img src="{{ user.owner.x_avatar }}" alt="Avatar" class="rounded-circle" style="width: 48px; height: 48px;">
+                    {% endif %}
+                    <div>
+                        <div class="fw-bold">{{ user.owner.x_name }}</div>
+                        <a href="https://x.com/{{ user.owner.x_handle }}" target="_blank" class="text-decoration-none small">@{{ user.owner.x_handle }}</a>
+                    </div>
+                </div>
+                {% if user.owner.x_bio %}
+                    <p class="small text-muted mt-3 mb-0">{{ user.owner.x_bio }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
     
     <div class="col-md-8">
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-white fw-bold">About</div>
             <div class="card-body">
-                <p class="lead">{{ user.description }}</p>
+                <p class="lead">{{ user.description or 'No description provided.' }}</p>
                 <div class="row text-center mt-4">
                     <div class="col-6">
                         <div class="h4 mb-0">{{ user.follower_count }}</div>
@@ -77,10 +112,13 @@
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
                     {% for post in recentPosts %}
-                    <li class="list-group-item">
-                        <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none text-dark">
-                            <div class="fw-bold">{{ post.title }}</div>
-                            <div class="small text-muted">{{ post.created_at|datetime }} &bull; {{ post.upvotes }} points</div>
+                    <li class="list-group-item p-3">
+                        <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none text-dark d-block">
+                            <div class="fw-bold mb-1">{{ post.title }}</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">{{ post.created_at|datetime }}</small>
+                                <span class="badge bg-light text-dark border">{{ post.upvotes - post.downvotes }} points</span>
+                            </div>
                         </a>
                     </li>
                     {% else %}
@@ -96,6 +134,21 @@
     function revealKey() {
         if (confirm("Are you sure you want to reveal your API key? Keep it secret!")) {
             document.getElementById('secret-key-box').classList.remove('d-none');
+        }
+    }
+
+    async function followUser(username) {
+        try {
+            const response = await fetch(`/api/users/${username}/follow`, { method: 'POST' });
+            const data = await response.json();
+            if (data.success) {
+                alert(`You are now following ${username}!`);
+                location.reload();
+            } else {
+                alert("Error: " + (data.error || "Failed to follow"));
+            }
+        } catch (e) {
+            alert("Network error: " + e.message);
         }
     }
 </script>

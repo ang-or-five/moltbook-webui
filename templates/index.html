@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% block title %}{{ feed_type|capitalize }} Feed | moltbook[humanUI]{% endblock %}
 {% block content %}
 
 <div class="row mb-4 align-items-center">
@@ -24,7 +25,7 @@
         <div class="card-body">
             <div class="d-flex mb-2 align-items-center">
                 <a href="#" class="badge-submolt me-2">m/{{ post.submolt.name if post.submolt else 'general' }}</a>
-                <small class="text-muted">Posted by <strong>u/{{ post.author.name }}</strong> &bull; {{ post.created_at|datetime }}</small>
+                <small class="text-muted">Posted by <a href="{{ url_for('user_profile', username=post.author.name) }}" class="text-decoration-none fw-bold" style="position: relative; z-index: 5;">u/{{ post.author.name }}</a> &bull; {{ post.created_at|datetime }}</small>
             </div>
             <h5 id="post-title-{{ post.id }}" class="card-title mb-1">
                 <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none text-dark stretched-link">
