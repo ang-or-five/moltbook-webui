@@ -288,6 +288,29 @@ def create_post():
             
         resp = http_session.post(f"{API_BASE}/posts", json=payload, headers=get_auth_headers())
         
+        # Handle captcha if auto-solve is enabled
+        if resp.status_code == 403 and session.get('auto_solve_captcha'):
+            try:
+                resp_data = resp.json()
+                challenge = resp_data.get('challenge')
+                verification_code = resp_data.get('verification_code')
+                
+                if challenge:
+                    from captcha_harvester import solve_captcha_with_ai
+                    captcha_provider = session.get('captcha_ai_provider', 'openai')
+                    captcha_model = session.get('captcha_model', 'gpt-4.1-nano')
+                    ai_key = get_provider_key(captcha_provider, 'captcha')
+                    
+                    if ai_key:
+                        solve_result = solve_captcha_with_ai(challenge, ai_key, captcha_model, captcha_provider)
+                        answer = solve_result.get('answer')
+                        if answer:
+                            payload['answer'] = answer
+                            payload['verification_code'] = verification_code
+                            resp = http_session.post(f"{API_BASE}/posts", json=payload, headers=get_auth_headers())
+            except Exception as e:
+                flash(f"Captcha auto-solve failed: {str(e)}", "warning")
+
         if resp.status_code in [200, 201]:
             flash("Post successfully created!", "success")
             cache.clear()
@@ -312,6 +335,29 @@ def create_comment(post_id):
         
     resp = http_session.post(f"{API_BASE}/posts/{post_id}/comments", json=payload, headers=get_auth_headers())
     
+    # Handle captcha if auto-solve is enabled
+    if resp.status_code == 403 and session.get('auto_solve_captcha'):
+        try:
+            resp_data = resp.json()
+            challenge = resp_data.get('challenge')
+            verification_code = resp_data.get('verification_code')
+            
+            if challenge:
+                from captcha_harvester import solve_captcha_with_ai
+                captcha_provider = session.get('captcha_ai_provider', 'openai')
+                captcha_model = session.get('captcha_model', 'gpt-4.1-nano')
+                ai_key = get_provider_key(captcha_provider, 'captcha')
+                
+                if ai_key:
+                    solve_result = solve_captcha_with_ai(challenge, ai_key, captcha_model, captcha_provider)
+                    answer = solve_result.get('answer')
+                    if answer:
+                        payload['answer'] = answer
+                        payload['verification_code'] = verification_code
+                        resp = http_session.post(f"{API_BASE}/posts/{post_id}/comments", json=payload, headers=get_auth_headers())
+        except Exception as e:
+            flash(f"Captcha auto-solve failed: {str(e)}", "warning")
+
     if resp.status_code == 429:
         flash("Rate limit active. Please wait a moment.", "warning")
     elif resp.status_code not in [200, 201]:
@@ -847,12 +893,34 @@ def mass_drafts_approve():
     api_key = session.get('api_key')
     
     try:
-        from captcha_harvester import post_comment, load_pending_drafts, save_pending_drafts
+        from captcha_harvester import post_comment, load_pending_drafts, save_pending_drafts, solve_captcha_with_ai
         
-        # Post the comment
-        success = post_comment(post_id, draft_text, api_key)
+        # 1. First attempt to post
+        resp = post_comment(post_id, draft_text, api_key)
         
-        if success:
+        # 2. Handle captcha if required
+        if resp.status_code == 403:
+            resp_data = resp.json()
+            challenge = resp_data.get('challenge')
+            verification_code = resp_data.get('verification_code')
+            
+            if challenge and session.get('auto_solve_captcha'):
+                # Get captcha AI settings
+                captcha_provider = session.get('captcha_ai_provider', 'openai')
+                captcha_model = session.get('captcha_model', 'gpt-4.1-nano')
+                ai_key = get_provider_key(captcha_provider, 'captcha')
+                
+                if ai_key:
+                    # Solve the captcha
+                    solve_result = solve_captcha_with_ai(challenge, ai_key, captcha_model, captcha_provider)
+                    answer = solve_result.get('answer')
+                    
+                    if answer:
+                        # 3. Second attempt with answer
+                        resp = post_comment(post_id, draft_text, api_key, captcha_answer=answer, verification_code=verification_code)
+
+        # 4. Final check
+        if resp.status_code in [200, 201]:
             # Update draft status
             drafts = load_pending_drafts()
             for draft in drafts:
@@ -863,7 +931,11 @@ def mass_drafts_approve():
             
             return jsonify({"success": True, "message": "Draft posted successfully"})
         else:
-            return jsonify({"error": "Failed to post comment"}), 500
+            error_msg = resp.text
+            try:
+                error_msg = resp.json().get('error', resp.text)
+            except: pass
+            return jsonify({"error": f"Failed to post comment: {error_msg}"}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

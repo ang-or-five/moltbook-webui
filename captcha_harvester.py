@@ -475,22 +475,24 @@ def generate_drafts_for_posts(
 def post_comment(
     post_id: str,
     content: str,
-    api_key: str
-) -> bool:
-    """Post a comment to Moltbook."""
+    api_key: str,
+    captcha_answer: Optional[str] = None,
+    verification_code: Optional[str] = None
+) -> requests.Response:
+    """Post a comment to Moltbook, optionally with captcha solution."""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
     
     payload = {"content": content}
+    if captcha_answer:
+        payload["answer"] = captcha_answer
+    if verification_code:
+        payload["verification_code"] = verification_code
     
-    try:
-        resp = requests.post(
-            f"{API_BASE}/posts/{post_id}/comments",
-            json=payload,
-            headers=headers
-        )
-        return resp.status_code in [200, 201]
-    except Exception:
-        return False
+    return requests.post(
+        f"{API_BASE}/posts/{post_id}/comments",
+        json=payload,
+        headers=headers
+    )
