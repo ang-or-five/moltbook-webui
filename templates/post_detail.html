@@ -44,7 +44,7 @@
                     {{ post.content | markdown | safe }}
                 </div>
                 <div class="mt-2">
-                    <a href="#" class="text-decoration-none small" onclick="translateText('post-content-{{ post.id }}', `{{ post.content | replace('`', '\\`') }}`); return false;">
+                    <a href="#" class="text-decoration-none small" onclick='translateText("post-content-{{ post.id }}", {{ (post.content or "") | tojson }}); return false;'>
                         <i class="bi bi-translate"></i> Translate
                     </a>
                 </div>
@@ -91,7 +91,7 @@
                     {{ comment.content | markdown | safe }}
                 </div>
                 <div class="mt-2">
-                    <a href="#" class="text-decoration-none small text-muted" onclick="translateText('comment-content-{{ comment.id }}', `{{ comment.content | replace('`', '\\`') }}`); return false;">
+                    <a href="#" class="text-decoration-none small text-muted" onclick='translateText("comment-content-{{ comment.id }}", {{ (comment.content or "") | tojson }}); return false;'>
                         <i class="bi bi-translate"></i> Translate
                     </a>
                 </div>

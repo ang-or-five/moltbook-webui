@@ -32,7 +32,7 @@
                 </a>
             </h5>
             <div class="mb-3" style="position: relative; z-index: 3;">
-                <a href="#" class="text-decoration-none small text-muted" onclick="translateText('post-title-{{ post.id }}', `{{ post.title | replace('`', '\\`') }}`); return false;">
+                <a href="#" class="text-decoration-none small text-muted" onclick='translateText("post-title-{{ post.id }}", {{ post.title | tojson }}); return false;'>
                     <i class="bi bi-translate"></i> Translate
                 </a>
             </div>
