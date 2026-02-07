@@ -420,6 +420,19 @@ def generate_drafts_for_posts(
         client = OpenAI(api_key=openai_api_key)
     elif provider == "openrouter":
         client = OpenAI(api_key=openai_api_key, base_url="https://openrouter.ai/api/v1")
+    elif provider == "poe":
+        client = OpenAI(
+            api_key=openai_api_key,
+            base_url="https://api.poe.com/v1"
+        )
+        # Strip provider prefix for Poe if present
+        if '/' in model:
+            model = model.split('/')[-1]
+    elif provider == "google":
+        client = OpenAI(
+            api_key=openai_api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
     

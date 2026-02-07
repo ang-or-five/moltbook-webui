@@ -736,8 +736,8 @@ def captcha_solve():
     
     data = request.json
     challenge = data.get('challenge', '')
-    provider = data.get('provider', 'openai')
-    model = data.get('model', 'gpt-4.1-nano')
+    provider = data.get('provider') or session.get('captcha_ai_provider', 'openai')
+    model = data.get('model') or session.get('captcha_model', 'gpt-4.1-nano')
     
     if not challenge:
         return jsonify({"error": "No challenge provided"}), 400

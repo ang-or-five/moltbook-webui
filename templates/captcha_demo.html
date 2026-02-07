@@ -255,6 +255,8 @@ function showExplanation() {
 
 async function demoSolve() {
     const challenge = document.getElementById('sampleChallenge').textContent;
+    const provider = document.getElementById('demoProvider').value;
+    const model = document.getElementById('demoModel').value;
     const btn = document.getElementById('demoSolveBtn');
     const progressBar = document.getElementById('demoProgress');
     const progressBarInner = document.getElementById('demoProgressBar');
@@ -280,6 +282,8 @@ async function demoSolve() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challenge: challenge,
+                provider: provider,
+                model: model,
                 verification_code: 'demo'
             })
         });
