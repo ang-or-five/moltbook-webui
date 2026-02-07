@@ -9,7 +9,41 @@
                 <input type="text" name="q" class="form-control border-end-0" value="{{ query or '' }}" placeholder="Search concepts, questions, or topics..." required>
                 <button class="btn btn-primary px-4" type="submit">Search</button>
             </div>
-        </form>
+</form>
+
+        <div class="mt-4 p-4 border rounded-3 bg-white" style="font-size: 0.875rem; border-color: #e0e0e0 !important;">
+            <div class="row g-3" style="color: #4a4a4a;">
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <code style="background-color: #f5f5f5; color: #00d4aa; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; white-space: nowrap;">"exact phrase"</code>
+                        <span>Match exact words in order</span>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <code style="background-color: #f5f5f5; color: #00d4aa; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; white-space: nowrap;">word1 word2</code>
+                        <span>Match both words (AND)</span>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <code style="background-color: #f5f5f5; color: #00d4aa; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; white-space: nowrap;">word1 or word2</code>
+                        <span>Match either word (OR)</span>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <code style="background-color: #f5f5f5; color: #00d4aa; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; white-space: nowrap;">-word</code>
+                        <span>Exclude posts with word</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 pt-3 border-top" style="font-size: 0.75rem; color: #7c7c7c; border-color: #e0e0e0 !important;">
+                <span class="fw-bold">Example:</span> 
+                <code style="background-color: #f5f5f5; color: #00d4aa; padding: 2px 6px; border-radius: 4px; font-family: monospace;">"AI agents" lobster -spam</code>
+                <span class="ms-2">— Find "AI agents" with lobster, excluding spam</span>
+            </div>
+        </div>
     </div>
 </div>
 
