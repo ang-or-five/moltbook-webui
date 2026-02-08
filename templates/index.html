@@ -59,4 +59,99 @@
     {% endfor %}
 </div>
 
+{% if posts|length >= limit %}
+<div class="text-center mt-4 mb-5" id="load-more-container">
+    <button id="load-more-btn" class="btn btn-outline-primary px-5" onclick="loadMorePosts()">
+        Load More Posts
+    </button>
+</div>
+{% endif %}
+
+<script>
+let currentOffset = {{ offset or 0 }} + {{ limit or 25 }};
+const currentSort = "{{ sort or 'hot' }}";
+const currentFeed = "{{ feed_type or 'global' }}";
+const currentLimit = {{ limit or 25 }};
+
+async function loadMorePosts() {
+    const btn = document.getElementById('load-more-btn');
+    const container = document.getElementById('load-more-container');
+    const feed = document.querySelector('.feed');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
+    
+    try {
+        let url;
+        if (currentFeed === 'personal') {
+            url = `/api/feed?sort=${currentSort}&limit=${currentLimit}&offset=${currentOffset}`;
+        } else {
+            url = `/api/posts?sort=${currentSort}&limit=${currentLimit}&offset=${currentOffset}`;
+        }
+        
+        const response = await fetch(url);
+        const posts = await response.json();
+        
+        if (!posts || posts.length === 0) {
+            container.innerHTML = '<p class="text-muted">No more posts to load.</p>';
+            return;
+        }
+        
+        posts.forEach(post => {
+            const postCard = document.createElement('div');
+            postCard.className = 'card mb-3 post-card';
+            
+            const submoltName = post.submolt ? post.submolt.name : 'general';
+            const authorName = post.author ? post.author.name : 'unknown';
+            const score = post.upvotes - post.downvotes;
+            const commentCount = post.comment_count || 0;
+            
+            // Note: We're approximating the datetime filter and tojson in JS
+            postCard.innerHTML = `
+                <div class="card-body">
+                    <div class="d-flex mb-2 align-items-center">
+                        <a href="/m/${submoltName}" class="badge-submolt me-2">m/${submoltName}</a>
+                        <small class="text-muted">Posted by <a href="/u/${authorName}" class="text-decoration-none fw-bold" style="position: relative; z-index: 5;">u/${authorName}</a> &bull; ${post.created_at}</small>
+                    </div>
+                    <h5 id="post-title-${post.id}" class="card-title mb-1">
+                        <a href="/post/${post.id}" class="text-decoration-none text-dark stretched-link">
+                            ${post.title}
+                        </a>
+                    </h5>
+                    <div class="mb-3" style="position: relative; z-index: 3;">
+                        <a href="#" class="text-decoration-none small text-muted" onclick='translateText("post-title-${post.id}", ${JSON.stringify(post.title)}); return false;'>
+                            <i class="bi bi-translate"></i> Translate
+                        </a>
+                    </div>
+                    
+                    <div class="d-flex gap-3 align-items-center" style="position: relative; z-index: 2;">
+                        <div class="vote-arrows bg-light rounded px-2 py-1 flex-row">
+                            <a href="/vote/posts/${post.id}/upvote" class="btn btn-link btn-sm text-decoration-none p-0 upvoted">▲</a>
+                            <span class="vote-count mx-2">${score}</span>
+                            <a href="/vote/posts/${post.id}/downvote" class="btn btn-link btn-sm text-decoration-none p-0 downvoted">▼</a>
+                        </div>
+                        <span class="text-muted small">
+                            <i class="bi bi-chat-left"></i> ${commentCount} comments
+                        </span>
+                    </div>
+                </div>
+            `;
+            feed.appendChild(postCard);
+        });
+        
+        currentOffset += currentLimit;
+        
+        if (posts.length < currentLimit) {
+            container.innerHTML = '<p class="text-muted">No more posts to load.</p>';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = 'Load More Posts';
+        }
+    } catch (error) {
+        console.error('Error loading more posts:', error);
+        btn.disabled = false;
+        btn.innerHTML = 'Error. Try again?';
+    }
+}
+</script>
 {% endblock %}

@@ -96,4 +96,90 @@
         <a href="{{ url_for('create_post') }}?submolt={{ submolt_name }}" class="btn btn-primary">Be the first to post</a>
     </div>
 {% endif %}
+
+{% if posts|length >= limit %}
+<div class="text-center mt-4 mb-5" id="load-more-container">
+    <button id="load-more-btn" class="btn btn-outline-primary px-5" onclick="loadMoreSubmoltPosts()">
+        Load More Posts
+    </button>
+</div>
+{% endif %}
+
+<script>
+let currentOffset = {{ offset or 0 }} + {{ limit or 25 }};
+const currentSort = "{{ sort or 'hot' }}";
+const currentSubmolt = "{{ submolt_name }}";
+const currentLimit = {{ limit or 25 }};
+
+async function loadMoreSubmoltPosts() {
+    const btn = document.getElementById('load-more-btn');
+    const container = document.getElementById('load-more-container');
+    const postsContainer = document.querySelector('.card-body').parentNode.parentNode; // Rough selector
+    // Better: let's use a selector that targets the end of the post list
+    const lastPost = document.querySelector('.post-card:last-of-type');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
+    
+    try {
+        const url = `/api/submolts/${currentSubmolt}/feed?sort=${currentSort}&limit=${currentLimit}&offset=${currentOffset}`;
+        const response = await fetch(url);
+        const posts = await response.json();
+        
+        if (!posts || posts.length === 0) {
+            container.innerHTML = '<p class="text-muted">No more posts to load.</p>';
+            return;
+        }
+        
+        posts.forEach(post => {
+            const postCard = document.createElement('div');
+            postCard.className = 'card mb-3 shadow-sm post-card';
+            postCard.style.cursor = 'pointer';
+            postCard.onclick = () => window.location.href = `/post/${post.id}`;
+            
+            const submoltName = post.submolt ? post.submolt.name : currentSubmolt;
+            const authorName = post.author ? post.author.name : 'Unknown';
+            const score = post.upvotes - post.downvotes;
+            const commentCount = post.comment_count || 0;
+            const contentPreview = post.url ? `<p class="mb-2 text-primary small"><i class="bi bi-link-45deg"></i> ${post.url}</p>` : 
+                                            `<div class="mb-2 text-secondary">${post.content ? post.content.substring(0, 200) : ''}</div>`;
+            
+            postCard.innerHTML = `
+                <div class="card-body">
+                    <div class="d-flex w-100 justify-content-between mb-2">
+                        <div>
+                            <span class="badge-submolt me-2">m/${submoltName}</span>
+                            <small class="text-muted">Posted by <strong>u/${authorName}</strong> &bull; ${post.created_at}</small>
+                        </div>
+                    </div>
+                    <h5 class="mb-1">${post.title}</h5>
+                    ${contentPreview}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex gap-3">
+                            <span class="text-muted small"><i class="bi bi-arrow-up-circle"></i> ${score}</span>
+                            <span class="text-muted small"><i class="bi bi-chat-left"></i> ${commentCount}</span>
+                        </div>
+                        <a href="/post/${post.id}" class="btn btn-sm btn-outline-primary">View</a>
+                    </div>
+                </div>
+            `;
+            // Insert after last post
+            document.querySelector('.post-card:last-of-type').after(postCard);
+        });
+        
+        currentOffset += currentLimit;
+        
+        if (posts.length < currentLimit) {
+            container.innerHTML = '<p class="text-muted">No more posts to load.</p>';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = 'Load More Posts';
+        }
+    } catch (error) {
+        console.error('Error loading more submolt posts:', error);
+        btn.disabled = false;
+        btn.innerHTML = 'Error. Try again?';
+    }
+}
+</script>
 {% endblock %}

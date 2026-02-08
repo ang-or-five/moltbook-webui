@@ -127,17 +127,19 @@ def index():
     
     sort = request.args.get('sort', 'hot')
     feed_type = request.args.get('feed', 'global')
+    limit = int(request.args.get('limit', 25))
+    offset = int(request.args.get('offset', 0))
     
     headers = get_auth_headers()
     
     if feed_type == 'personal':
-        url = f"{API_BASE}/feed?sort={sort}&limit=25"
+        url = f"{API_BASE}/feed?sort={sort}&limit={limit}&offset={offset}"
     else:
-        url = f"{API_BASE}/posts?sort={sort}&limit=25"
+        url = f"{API_BASE}/posts?sort={sort}&limit={limit}&offset={offset}"
         
     posts = []
     # Using a cache key based on query params and auth
-    cache_key = f"feed_{feed_type}_{sort}_{session.get('api_key')[:8]}"
+    cache_key = f"feed_{feed_type}_{sort}_{limit}_{offset}_{session.get('api_key')[:8]}"
     cached_data = cache.get(cache_key)
     
     if cached_data:
@@ -163,7 +165,7 @@ def index():
         except Exception as e:
             flash(f"Connection error: {str(e)}", "danger")
 
-    return render_template('index.html', posts=posts, sort=sort, feed_type=feed_type)
+    return render_template('index.html', posts=posts, sort=sort, feed_type=feed_type, limit=limit, offset=offset)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -479,6 +481,8 @@ def list_submolts():
 def view_submolt(name):
     if 'api_key' not in session: return redirect(url_for('login'))
     sort = request.args.get('sort', 'hot')
+    limit = int(request.args.get('limit', 25))
+    offset = int(request.args.get('offset', 0))
     
     headers = get_auth_headers()
     
@@ -492,14 +496,14 @@ def view_submolt(name):
         return redirect(url_for('list_submolts'))
         
     # Get feed
-    f_resp = http_session.get(f"{API_BASE}/submolts/{name}/feed?sort={sort}", headers=headers)
+    f_resp = http_session.get(f"{API_BASE}/submolts/{name}/feed?sort={sort}&limit={limit}&offset={offset}", headers=headers)
     posts = []
     if f_resp.status_code == 200:
         posts_data = f_resp.json()
         posts = posts_data.get('posts') or posts_data.get('data') or posts_data
         if not isinstance(posts, list): posts = []
         
-    return render_template('submolt.html', submolt=submolt, posts=posts, submolt_name=name, sort=sort)
+    return render_template('submolt.html', submolt=submolt, posts=posts, submolt_name=name, sort=sort, limit=limit, offset=offset)
 
 @app.route('/submolts/create', methods=['GET', 'POST'])
 def create_submolt():
@@ -959,6 +963,66 @@ def api_agents_me():
     try:
         resp = http_session.get(f"{API_BASE}/agents/me", headers=headers)
         return (resp.text, resp.status_code, resp.headers.items())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/submolts/<name>/feed', methods=['GET'])
+def api_submolt_feed(name):
+    """Proxy to fetch submolt feed from Moltbook API."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    sort = request.args.get('sort', 'hot')
+    limit = request.args.get('limit', 25)
+    offset = request.args.get('offset', 0)
+    
+    headers = {"Authorization": f"Bearer {session['api_key']}"}
+    try:
+        resp = http_session.get(f"{API_BASE}/submolts/{name}/feed?sort={sort}&limit={limit}&offset={offset}", headers=headers)
+        if resp.status_code == 200:
+            data = resp.json()
+            posts = []
+            if isinstance(data, list):
+                posts = data
+            elif isinstance(data, dict):
+                posts = data.get('posts') or data.get('data') or data.get('results') or []
+                if isinstance(posts, dict) and 'posts' in posts:
+                    posts = posts['posts']
+                if not isinstance(posts, list):
+                    posts = []
+            return jsonify(posts)
+        else:
+            return jsonify({"error": f"API returned {resp.status_code}"}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/feed', methods=['GET'])
+def api_feed():
+    """Proxy to fetch personalized feed from Moltbook API."""
+    if 'api_key' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    sort = request.args.get('sort', 'hot')
+    limit = request.args.get('limit', 25)
+    offset = request.args.get('offset', 0)
+    
+    headers = {"Authorization": f"Bearer {session['api_key']}"}
+    try:
+        resp = http_session.get(f"{API_BASE}/feed?sort={sort}&limit={limit}&offset={offset}", headers=headers)
+        if resp.status_code == 200:
+            data = resp.json()
+            posts = []
+            if isinstance(data, list):
+                posts = data
+            elif isinstance(data, dict):
+                posts = data.get('posts') or data.get('data') or data.get('results') or []
+                if isinstance(posts, dict) and 'posts' in posts:
+                    posts = posts['posts']
+                if not isinstance(posts, list):
+                    posts = []
+            return jsonify(posts)
+        else:
+            return jsonify({"error": f"API returned {resp.status_code}"}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
