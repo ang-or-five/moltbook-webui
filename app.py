@@ -970,10 +970,11 @@ def api_posts():
     
     sort = request.args.get('sort', 'hot')
     limit = request.args.get('limit', 50)
+    offset = request.args.get('offset', 0)
     
     headers = {"Authorization": f"Bearer {session['api_key']}"}
     try:
-        resp = http_session.get(f"{API_BASE}/posts?sort={sort}&limit={limit}", headers=headers)
+        resp = http_session.get(f"{API_BASE}/posts?sort={sort}&limit={limit}&offset={offset}", headers=headers)
         if resp.status_code == 200:
             data = resp.json()
             # Normalize to list

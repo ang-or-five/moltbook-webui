@@ -363,21 +363,38 @@ async function generateDrafts(sort = 'hot') {
     }
 }
 
+let manualOffset = 0;
+let manualSort = 'hot';
+
 async function showManualPicker(sort) {
+    manualSort = sort;
+    manualOffset = 0;
     const modal = new bootstrap.Modal(document.getElementById('manualPickModal'));
     modal.show();
     
     const container = document.getElementById('manualPostsContainer');
+    container.innerHTML = '<div class="list-group" id="manualPostsList"></div><div class="text-center p-3" id="loadMoreContainer"></div>';
+    
+    await loadMorePosts();
+}
+
+async function loadMorePosts() {
+    const list = document.getElementById('manualPostsList');
+    const loadMoreContainer = document.getElementById('loadMoreContainer');
     const skipCommented = document.getElementById('commentedFilter').checked;
     
-    container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary"></div><p>Fetching posts...</p></div>';
+    loadMoreContainer.innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div> Fetching more...';
     
     try {
-        const response = await fetch(`/api/posts?sort=${sort}&limit=50`);
+        const response = await fetch(`/api/posts?sort=${manualSort}&limit=50&offset=${manualOffset}`);
         let posts = await response.json();
         
         if (!posts || !Array.isArray(posts)) {
-            container.innerHTML = '<p class="text-center p-4">No posts found or error fetching.</p>';
+            if (manualOffset === 0) {
+                document.getElementById('manualPostsContainer').innerHTML = '<p class="text-center p-4">No posts found or error fetching.</p>';
+            } else {
+                loadMoreContainer.innerHTML = '';
+            }
             return;
         }
 
@@ -401,27 +418,33 @@ async function showManualPicker(sort) {
             });
         }
         
-        if (!posts.length) {
-            container.innerHTML = '<p class="text-center p-4 text-muted">No posts found matching your filters.</p>';
+        if (!posts.length && manualOffset === 0) {
+            document.getElementById('manualPostsContainer').innerHTML = '<p class="text-center p-4 text-muted">No posts found matching your filters.</p>';
             return;
         }
         
-        let html = '<div class="list-group">';
         posts.forEach(post => {
-            html += `
-                <label class="list-group-item d-flex gap-3">
-                    <input class="form-check-input flex-shrink-0" type="checkbox" value="${post.id}" onchange="updateSelectedCount()">
-                    <span class="pt-1">
-                        <strong>${escapeHtml(post.title)}</strong>
-                        <small class="d-block text-muted">by ${escapeHtml(post.author_name || (post.author && post.author.name) || 'unknown')} | ${post.comment_count || 0} comments</small>
-                    </span>
-                </label>
+            const label = document.createElement('label');
+            label.className = 'list-group-item d-flex gap-3';
+            label.innerHTML = `
+                <input class="form-check-input flex-shrink-0" type="checkbox" value="${post.id}" onchange="updateSelectedCount()">
+                <span class="pt-1">
+                    <strong>${escapeHtml(post.title)}</strong>
+                    <small class="d-block text-muted">by ${escapeHtml(post.author_name || (post.author && post.author.name) || 'unknown')} | ${post.comment_count || 0} comments</small>
+                </span>
             `;
+            list.appendChild(label);
         });
-        html += '</div>';
-        container.innerHTML = html;
+        
+        manualOffset += 50;
+        
+        if (posts.length >= 50) {
+            loadMoreContainer.innerHTML = `<button class="btn btn-outline-primary btn-sm w-100" onclick="loadMorePosts()">Load More</button>`;
+        } else {
+            loadMoreContainer.innerHTML = '<p class="text-muted small mt-2">No more posts to load.</p>';
+        }
     } catch (e) {
-        container.innerHTML = `<p class="text-danger p-4">Error: ${e.message}</p>`;
+        loadMoreContainer.innerHTML = `<p class="text-danger p-2">Error: ${e.message}</p>`;
     }
 }
 
