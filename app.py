@@ -407,9 +407,10 @@ def profile():
             session['agent_name'] = agent_name
     
     if agent_name:
+        # Redirecting to /u/<username> will now handle everything through the same profile endpoint
         return redirect(url_for('user_profile', username=agent_name))
     
-    # Fallback if name fetch fails
+    # Fallback if name fetch fails (should rarely happen if key is valid)
     resp = http_session.get(f"{API_BASE}/agents/me", headers=get_auth_headers())
     user = {}
     if resp.status_code == 200:
