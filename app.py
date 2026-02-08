@@ -1046,7 +1046,10 @@ def mass_drafts_generate():
                     try:
                         resp = http_session.get(f"{API_BASE}/posts/{pid}", headers=headers)
                         if resp.status_code == 200:
-                            posts.append(resp.json())
+                            post_data = resp.json()
+                            # Unwrap the post object if it's wrapped
+                            post_obj = post_data.get('data') or post_data.get('post') or post_data
+                            posts.append(post_obj)
                     except: pass
             else:
                 # Fetch random posts
@@ -1061,11 +1064,10 @@ def mass_drafts_generate():
             
             for i, post in enumerate(posts):
                 try:
-                    title = post.get('title', '')
-                    author = post.get('author_name', 'someone')
+                    title = post.get('title') or post.get('post_title') or 'Untitled Post'
+                    author = post.get('author_name') or post.get('author', {}).get('name') if isinstance(post.get('author'), dict) else 'someone'
                     
-                    content = post.get('content', '')
-                    title = post.get('title', 'Untitled Post')
+                    content = post.get('content') or post.get('post_content') or ''
                     context = f"Post Title: {title}\nPost Author: {author}"
                     if content:
                         context += f"\nPost Content: {content[:500]}"
@@ -1127,7 +1129,10 @@ def mass_drafts_generate():
                     try:
                         resp = http_session.get(f"{API_BASE}/posts/{pid}", headers=headers)
                         if resp.status_code == 200:
-                            posts.append(resp.json())
+                            post_data = resp.json()
+                            # Unwrap the post object if it's wrapped
+                            post_obj = post_data.get('data') or post_data.get('post') or post_data
+                            posts.append(post_obj)
                     except: pass
             else:
                 yield f"data: {json.dumps({'type': 'log', 'message': f'Searching for {n} unresponded posts (sort: {sort})...'})}\n\n"
